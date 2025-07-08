@@ -24,9 +24,9 @@ admin:
   email: admin@admin.com
 
 fastapi:
-  base-url: http://localhost:8000
-  access-key: 956e4402a7eee3a205c5a25a0a5e16f5
+  base-url: ${FASTAPI_BASE_URL}
+  access-key: ${FASTAPI_ACCESS_KEY}
 
 jwt:
-  secret: 0aebb26723fd6764452d9c068715f162b55a78c4ed41694627261203b5df418a
-  expiration-ms: 3600000
+  secret: ${JWT_SECRET}
+  expiration-ms: ${JWT_EXPIRATION_MS:3600000}
