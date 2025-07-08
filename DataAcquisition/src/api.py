@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, Depends, Security, status
 from fastapi.security.api_key import APIKeyHeader
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import requests
 import yfinance as yf
 from alpaca.data.historical import StockHistoricalDataClient
@@ -55,8 +55,14 @@ client = StockHistoricalDataClient(api_key=KEY, secret_key=SECRET)
 
 
 # ─── Models ────────────────────────────────────────────────────────────────────
-class TradeResponse(BaseModel):
-    trade_data: dict
+class SimplifiedTrade(BaseModel):
+    price: float = Field(..., alias="p")
+    timestamp: datetime = Field(..., alias="t")
+    volume: int = Field(..., alias="s")
+
+    class Config:
+        # allow parsing from the short keys "p"/"t"/"s"
+        populate_by_name = True
 
 
 class BarData(BaseModel):
@@ -82,7 +88,7 @@ def root():
     }
 
 
-@app.get("/latest-trade/{symbol}", response_model=TradeResponse)
+@app.get("/latest-trade/{symbol}", response_model=SimplifiedTrade, response_model_by_alias=False)
 def get_latest_trade(symbol: str):
     """Get the latest trade data for a specific stock symbol"""
     url = f"https://data.alpaca.markets/v2/stocks/{symbol}/trades/latest?feed=iex&currency=USD"
@@ -91,13 +97,20 @@ def get_latest_trade(symbol: str):
         "APCA-API-KEY-ID": KEY,
         "APCA-API-SECRET-KEY": SECRET
     }
+
     response = requests.get(url, headers=headers)
     if response.status_code != 200:
         raise HTTPException(
             status_code=response.status_code,
             detail="Failed to fetch data from Alpaca"
         )
-    return {"trade_data": response.json()}
+
+    data = response.json()
+    # extract the inner trade object
+    trade_obj = data["trade"]
+
+    # either return the dict directly:
+    return trade_obj
 
 
 @app.get("/bars/{symbol}", response_model=BarData)
@@ -185,9 +198,4 @@ def get_market_cap(symbol: str):
         )
 
     # 2. Return structured response
-    return MarketCapResponse(
-        symbol=symbol,
-        market_cap=market_cap,
-        currency=currency,
-        timestamp=datetime.utcnow()
-    )
+    return MarketCapResponse(symbol=symbol, market_cap=market_cap, currency=currency, timestamp=datetime.utcnow())

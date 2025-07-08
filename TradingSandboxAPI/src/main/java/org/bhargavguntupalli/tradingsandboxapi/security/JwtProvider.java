@@ -14,20 +14,14 @@ import java.util.stream.Collectors;
 
 @Component
 public class JwtProvider {
-
     private final Key key;
     private final long expirationMs;
     private final JwtParser parser;
 
-    public JwtProvider(
-            @Value("${jwt.secret}") String secret,
-            @Value("${jwt.expiration-ms}") long expirationMs
-    ) {
-        this.key = Keys.hmacShaKeyFor(secret.getBytes());
+    public JwtProvider(Key jwtSigningKey, @Value("${jwt.expiration-ms}") long expirationMs) {
+        this.key = jwtSigningKey;
         this.expirationMs = expirationMs;
-        this.parser = Jwts.parserBuilder()
-                .setSigningKey(key)
-                .build();
+        this.parser = Jwts.parserBuilder().setSigningKey(key).build();
     }
 
     public String generateToken(Authentication authentication) {
