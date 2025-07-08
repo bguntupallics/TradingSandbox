@@ -1,0 +1,307 @@
+/*--------------------------------------------------------------
+4.0 Root Theme Variables
+--------------------------------------------------------------*/
+:root {
+    /* Backgrounds */
+    --bg-page:       #343541;
+    --bg-panel:      #444654;
+
+    /* Text */
+    --text-primary:   #e5e5e5;
+    --text-secondary: #a1a1aa;
+    --text-light:     #ffffff;
+
+    /* Inputs & Buttons */
+    --input-bg:      #40414f;
+    --input-border:  #5a5b6a;
+    --button-bg:     #444654;
+    --button-hover:  #4e4f67;
+    --control-text:  #e5e5e5;
+}
+
+/*--------------------------------------------------------------
+4.1 Dark Mode Override
+--------------------------------------------------------------*/
+.dark {
+    /* adjust for light mode if desired */
+    --bg-page:       #ffffff;
+    --bg-panel:      #f2f2f2;
+    --text-primary:   #222222;
+    --text-secondary: #555555;
+    --input-bg:      #ffffff;
+    --input-border:  #cccccc;
+    --button-bg:     #e0e0e0;
+    --button-hover:  #d4d4d4;
+    --control-text:  #222222;
+}
+
+/*--------------------------------------------------------------
+4.2 Global Reset & Base Styles
+--------------------------------------------------------------*/
+html, body, #root {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+    background-color: var(--bg-page);
+    color: var(--text-primary);
+    font-family: sans-serif;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/*--------------------------------------------------------------
+4.3 Typography Utilities
+--------------------------------------------------------------*/
+.text-secondary { color: var(--text-secondary); }
+.text-light     { color: var(--text-light);      }
+
+/*--------------------------------------------------------------
+4.4 Panel / Card Component
+--------------------------------------------------------------*/
+.panel {
+    background-color: var(--bg-panel);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+/* legacy dashboard panels */
+.price-panel {
+    background-color: var(--bg-panel);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-top: 1rem;
+}
+
+/*--------------------------------------------------------------
+4.5 Form Controls
+--------------------------------------------------------------*/
+input, textarea, select {
+    background-color: var(--input-bg);
+    border: 1px solid var(--input-border);
+    color: var(--text-light);
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.375rem;
+    font-family: inherit;
+    font-size: 1rem;
+    transition: border 0.2s ease;
+}
+input:focus,
+textarea:focus,
+select:focus {
+    outline: none;
+    border-color: var(--button-hover);
+}
+
+/*--------------------------------------------------------------
+4.6 Buttons & Controls
+--------------------------------------------------------------*/
+button {
+    background-color: var(--button-bg);
+    color: var(--control-text);
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    font-family: inherit;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out;
+}
+button:hover { background-color: var(--button-hover); }
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/*--------------------------------------------------------------
+4.7 Layout Utilities
+--------------------------------------------------------------*/
+.flex            { display: flex;                       }
+.items-center    { align-items: center;                 }
+.justify-between { justify-content: space-between;      }
+.space-x-4 > * + * { margin-left: 1rem;                 }
+
+/*--------------------------------------------------------------
+4.7.a Container Utility
+--------------------------------------------------------------*/
+.container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 1rem 1rem;
+}
+
+/*--------------------------------------------------------------
+4.8 Miscellaneous Utilities
+--------------------------------------------------------------*/
+.hidden { display: none !important; }
+.block  { display: block !important;  }
+.w-full { width: 100% !important;     }
+
+/*--------------------------------------------------------------
+5. Navbar Styles
+--------------------------------------------------------------*/
+.navbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: var(--bg-panel);
+    padding: 0 1rem;
+    height: 4rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.navbar-logo img {
+    height: 32px;
+    width: auto;
+}
+.navbar-nav {
+    display: flex;
+    gap: 1.5rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+.nav-item.active,
+.nav-item:hover {
+    color: var(--control-text);
+}
+.nav-icon {
+    width: 20px;
+    height: 20px;
+}
+.nav-label {
+    /* can hide on small screens via media query if desired */
+}
+
+/*--------------------------------------------------------------
+6. Dashboard & Search Common Styles
+--------------------------------------------------------------*/
+/* if you still use .dashboard/.search-page wrapper */
+.dashboard,
+.search-page {
+    /* fallback/alias for .container */
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 1rem;
+}
+
+.search-bar {
+    display: flex;
+    gap: 0.5rem;
+    margin: 1rem 0;
+}
+
+.ticker-input {
+    background-color: var(--input-bg);
+    border: 1px solid var(--input-border);
+    color: var(--text-light);
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.375rem;
+    font-size: 1rem;
+    flex: 1;
+}
+
+.btn.search-btn {
+    /* inherits button styling */
+}
+
+.btn.logout {
+    margin-left: auto;
+}
+
+.error {
+    color: red; /* or var(--error) if defined */
+    margin: 0.5rem 0;
+}
+
+.return-panel {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.return-value.positive {
+    color: #4caf50;
+}
+
+.return-value.negative {
+    color: #f44336;
+}
+
+.chart-panel {
+    margin-top: 1rem;
+}
+
+/* Positioning for the edit button on the account panel */
+.account-panel {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.account-panel .edit-btn {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: none;
+    border: none;
+    padding: 0.25rem;
+    cursor: pointer;
+}
+
+/* Spread out the form fields when editing */
+.account-panel form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;         /* space between each form‐row */
+    margin: 0.75rem auto;
+}
+
+/* Bigger inputs/selects for more breathing room */
+.account-panel form input,
+.account-panel form select {
+    padding: 0.4rem 1rem;
+    border-radius: 0.375rem;
+}
+
+input,
+textarea,
+select {
+    color: var(--text-primary);
+}
+
+.btn {
+    background-color: var(--button-bg);
+    color: var(--control-text);
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.btn:hover {
+    background-color: var(--button-hover);
+}
+
+.space-x-4 > * + * {
+    margin-left: 1rem;
+}
