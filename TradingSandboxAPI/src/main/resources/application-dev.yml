@@ -1,0 +1,32 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/devdb
+    username: devuser
+    password: devpass
+    hikari:
+      maximum-pool-size: 5
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+logging:
+  level:
+    org.springframework.security: DEBUG
+
+admin:
+  username: admin
+  password: admin
+  first-name: admin
+  last-name: admin
+  email: admin@admin.com
+
+fastapi:
+  base-url: http://localhost:8000
+  access-key: 956e4402a7eee3a205c5a25a0a5e16f5
+
+jwt:
+  secret: 0aebb26723fd6764452d9c068715f162b55a78c4ed41694627261203b5df418a
+  expiration-ms: 3600000
