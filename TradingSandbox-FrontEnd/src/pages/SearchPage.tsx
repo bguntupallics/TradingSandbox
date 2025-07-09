@@ -17,32 +17,58 @@ interface DailyPrice {
     closingPrice: number;
 }
 
+interface TradeResponse {
+    symbol: string;
+    price: number;
+    // ...other fields if you need them
+}
+
 export default function SearchPage() {
     const [symbol, setSymbol] = useState<string>('');
     const [displayedSymbol, setDisplayedSymbol] = useState<string>('');
     const [monthlyData, setMonthlyData] = useState<DailyPrice[]>([]);
+    const [latestPrice, setLatestPrice] = useState<number | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
 
     const handleSearch = async () => {
         setError(null);
         setMonthlyData([]);
-        // lock in the symbol only on search
+        setLatestPrice(null);
+
         if (!symbol) {
             setError('Please enter a ticker symbol.');
             return;
         }
+
         setLoading(true);
         try {
-            const bars: DailyPrice[] = await fetchWithJwt(
-                `/api/prices/${symbol}/last-month`
-            );
+            // 1) Fetch last-month prices
+            const bars: DailyPrice[] = await fetchWithJwt(`/api/prices/${symbol}/last-month`);
+
             if (bars.length === 0) {
                 setError(`No price data found for ${symbol}`);
             } else {
                 setMonthlyData(bars);
                 setDisplayedSymbol(symbol);
             }
+
+            // 2) Fetch the latest price
+            const trade: TradeResponse = await fetchWithJwt(`/api/prices/${symbol}/latest-trade`);
+
+            const tradeDate = new Date().toISOString().split('T')[0];
+            const combined: DailyPrice[] = [
+                ...bars,
+                {
+                    symbol,
+                    date: tradeDate,
+                    closingPrice: trade.price
+                }
+            ];
+
+            setMonthlyData(combined);
+            setLatestPrice(trade.price);
+            setDisplayedSymbol(symbol);
         } catch (err) {
             setError((err as Error).message);
         } finally {
@@ -84,19 +110,17 @@ export default function SearchPage() {
             {/* Return panel: only when we have data */}
             {monthlyData.length > 0 && (
                 <div className="price-panel return-panel">
-                    <h2>{displayedSymbol}</h2>
-                    <h4
-                        className={
-                            dollarReturn >= 0
-                                ? 'return-value positive'
-                                : 'return-value negative'
-                        }
-                    >
-                        ${Math.abs(dollarReturn).toFixed(2)}
-                    </h4>
-                    <h4 className={ percentReturn >= 0 ? 'return-value positive' : 'return-value negative'}>
-                        {Math.abs(percentReturn).toFixed(2)}%
-                    </h4>
+                    <h2>{displayedSymbol}:</h2>
+                    <div className="return-values">
+                        {latestPrice !== null && (
+                            <h2 className="latest-price">
+                                ${latestPrice.toFixed(2)}
+                            </h2>
+                        )}
+                        <h2 className={dollarReturn >= 0 ? 'return-value positive' : 'return-value negative'}>
+                            ${Math.abs(dollarReturn).toFixed(2)} {Math.abs(percentReturn).toFixed(2)}%
+                        </h2>
+                    </div>
                 </div>
             )}
 

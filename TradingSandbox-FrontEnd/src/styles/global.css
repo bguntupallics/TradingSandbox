@@ -245,6 +245,19 @@ button:disabled {
     color: #f44336;
 }
 
+.return-panel .return-values {
+    display: flex;
+    justify-content: center;   /* center the items horizontally */
+    align-items: center;
+    gap: 1rem;                 /* spacing between values */
+}
+
+/* Symbol stays left-aligned by default — no change needed */
+.return-panel h2 {
+    margin-bottom: 0.5rem;
+    /* keep whatever text-align you already had (usually left) */
+}
+
 .chart-panel {
     margin-top: 1rem;
 }
