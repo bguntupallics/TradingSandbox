@@ -7,7 +7,8 @@ import {
     YAxis,
     CartesianGrid,
     Tooltip,
-    ResponsiveContainer
+    ResponsiveContainer,
+    ReferenceLine
 } from 'recharts';
 import '../styles/global.css';
 
@@ -20,7 +21,6 @@ interface DailyPrice {
 interface TradeResponse {
     symbol: string;
     price: number;
-    // ...other fields if you need them
 }
 
 export default function SearchPage() {
@@ -133,6 +133,11 @@ export default function SearchPage() {
                             <CartesianGrid
                                 strokeDasharray="3 3"
                                 stroke="var(--input-border)"
+                            />
+                            <ReferenceLine
+                                y={firstPrice}
+                                stroke="var(--control-text)"
+                                strokeWidth={1}
                             />
                             <XAxis
                                 dataKey="date"
