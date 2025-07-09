@@ -2,6 +2,8 @@ package org.bhargavguntupalli.tradingsandboxapi.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +28,14 @@ public class BarDataDto {
     private Map<String, List<BarDto>> bars;
 
     public BarDataDto() { }
+
+    public BarDataDto(String symbol, LocalDateTime start, LocalDateTime end, String timeframe, Map<String, List<BarDto>> bars) {
+        this.symbol = symbol;
+        this.startDate = start;
+        this.endDate = end;
+        this.timeframe = timeframe;
+        this.bars = bars;
+    }
 
     public String getSymbol() {
         return symbol;

@@ -1,7 +1,6 @@
 package org.bhargavguntupalli.tradingsandboxapi.services;
 
 import org.bhargavguntupalli.tradingsandboxapi.dto.UserDto;
-import org.bhargavguntupalli.tradingsandboxapi.models.User;
 
 import java.math.BigDecimal;
 

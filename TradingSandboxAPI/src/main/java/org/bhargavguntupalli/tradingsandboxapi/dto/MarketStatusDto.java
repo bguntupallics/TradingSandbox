@@ -1,7 +1,7 @@
 package org.bhargavguntupalli.tradingsandboxapi.dto;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -15,10 +15,12 @@ public class MarketStatusDto {
 
     @Getter @Setter
     @JsonAlias("next_open")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mmXXX")
     private OffsetDateTime nextOpen;
 
     @Getter @Setter
     @JsonAlias("next_close")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mmXXX")
     private OffsetDateTime nextClose;
 
     public MarketStatusDto() {}
