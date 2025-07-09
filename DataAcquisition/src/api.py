@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, Depends, Security, status
 from fastapi.security.api_key import APIKeyHeader
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 import requests
 import yfinance as yf
 from alpaca.data.historical import StockHistoricalDataClient
@@ -47,7 +47,7 @@ app = FastAPI(
     title="Data Acquisition API for TradingSandbox",
     description="API for fetching stock data from Alpaca",
     version="1.0.0",
-    dependencies=[Depends(verify_api_key)]    # <-- enforce API-key on every route
+    dependencies=[Depends(verify_api_key)]  # <-- enforce API-key on every route
 )
 
 # Initialize Alpaca client for historical bars
@@ -60,9 +60,10 @@ class SimplifiedTrade(BaseModel):
     timestamp: datetime = Field(..., alias="t")
     volume: int = Field(..., alias="s")
 
-    class Config:
-        # allow parsing from the short keys "p"/"t"/"s"
-        populate_by_name = True
+    model_config = ConfigDict(
+        populate_by_name=True,
+        # alias population is on by default in V2
+    )
 
 
 class BarData(BaseModel):

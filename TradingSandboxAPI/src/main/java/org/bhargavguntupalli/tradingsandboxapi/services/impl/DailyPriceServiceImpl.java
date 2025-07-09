@@ -187,11 +187,7 @@ public class DailyPriceServiceImpl implements DailyPriceService {
                             BigDecimal.valueOf(b.getClose())
                     );
                     toSave.add(priceEntity);
-                    result.add(new DailyPriceDto(
-                            symbol,
-                            barDate,
-                            priceEntity.getClosingPrice()
-                    ));
+                    result.add(new DailyPriceDto(symbol, barDate, priceEntity.getClosingPrice()));
                 }
             }
 

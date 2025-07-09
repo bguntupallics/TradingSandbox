@@ -52,13 +52,9 @@ export default function SearchPage() {
 
     // Compute dollar and percent return
     const firstPrice = monthlyData.length ? monthlyData[0].closingPrice : 0;
-    const lastPrice = monthlyData.length
-        ? monthlyData[monthlyData.length - 1].closingPrice
-        : 0;
+    const lastPrice = monthlyData.length ? monthlyData[monthlyData.length - 1].closingPrice : 0;
     const dollarReturn = lastPrice - firstPrice;
-    const percentReturn = firstPrice !== 0
-        ? (dollarReturn / firstPrice) * 100
-        : 0;
+    const percentReturn = firstPrice !== 0 ? (dollarReturn / firstPrice) * 100 : 0;
 
     return (
         <div className="container dashboard">
@@ -98,13 +94,7 @@ export default function SearchPage() {
                     >
                         ${Math.abs(dollarReturn).toFixed(2)}
                     </h4>
-                    <h4
-                        className={
-                            percentReturn >= 0
-                                ? 'return-value positive'
-                                : 'return-value negative'
-                        }
-                    >
+                    <h4 className={ percentReturn >= 0 ? 'return-value positive' : 'return-value negative'}>
                         {Math.abs(percentReturn).toFixed(2)}%
                     </h4>
                 </div>

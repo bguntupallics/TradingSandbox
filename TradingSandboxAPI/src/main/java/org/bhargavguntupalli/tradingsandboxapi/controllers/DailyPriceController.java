@@ -57,7 +57,7 @@ public class DailyPriceController {
         return ResponseEntity.ok(svc.findRange(symbol, start, end));
     }
 
-    @GetMapping("/latest-trade/{symbol}")
+    @GetMapping("/{symbol}/latest-trade")
     public TradeResponseDto latestTrade(@PathVariable String symbol) {
         return svc.getLatestTrade(symbol);
     }

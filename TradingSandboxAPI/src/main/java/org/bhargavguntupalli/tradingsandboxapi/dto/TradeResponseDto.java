@@ -1,15 +1,18 @@
 package org.bhargavguntupalli.tradingsandboxapi.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Data;
+
+@Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class TradeResponseDto {
-    private Object trade_data;  // You can replace Object with a more strongly typed class if you like
+    @JsonProperty("price")
+    private double price;
 
-    public TradeResponseDto() {}
+    @JsonProperty("timestamp")
+    private String timestamp;
 
-    public Object getTrade_data() {
-        return trade_data;
-    }
-
-    public void setTrade_data(Object trade_data) {
-        this.trade_data = trade_data;
-    }
+    @JsonProperty("volume")
+    private int volume;
 }
