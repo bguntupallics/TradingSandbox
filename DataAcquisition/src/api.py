@@ -81,6 +81,12 @@ class MarketCapResponse(BaseModel):
     timestamp: datetime
 
 
+class MarketStatus(BaseModel):
+    is_open: bool  # true if market is open now
+    next_open: datetime  # when the market will next open
+    next_close: datetime  # when the market will next close
+
+
 # ─── Endpoints ─────────────────────────────────────────────────────────────────
 @app.get("/")
 def root():
@@ -200,3 +206,20 @@ def get_market_cap(symbol: str):
 
     # 2. Return structured response
     return MarketCapResponse(symbol=symbol, market_cap=market_cap, currency=currency, timestamp=datetime.utcnow())
+
+
+@app.get("/market-status", response_model=MarketStatus)
+def get_market_status():
+    """Return current market open status and upcoming open/close times."""
+    url = "https://api.alpaca.markets/v2/clock"
+    headers = {
+        "accept":              "application/json",
+        "APCA-API-KEY-ID":     KEY,
+        "APCA-API-SECRET-KEY": SECRET,
+    }
+
+    resp = requests.get(url, headers=headers)
+    if resp.status_code != 200:
+        raise HTTPException(status_code=resp.status_code, detail="Failed to fetch market clock from Alpaca")
+
+    return resp.json()
