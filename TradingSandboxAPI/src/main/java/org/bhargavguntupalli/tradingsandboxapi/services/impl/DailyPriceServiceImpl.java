@@ -9,7 +9,6 @@ import org.bhargavguntupalli.tradingsandboxapi.models.DailyPriceId;
 import org.bhargavguntupalli.tradingsandboxapi.repositories.DailyPriceRepository;
 import org.bhargavguntupalli.tradingsandboxapi.services.DailyPriceService;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -30,7 +29,6 @@ public class DailyPriceServiceImpl implements DailyPriceService {
 
     private final DailyPriceRepository repo;
     private final RestTemplate rest;
-    private final DailyPriceService self;
 
     // inject from application-dev.yml
     @Value("${fastapi.base-url}")
@@ -39,10 +37,9 @@ public class DailyPriceServiceImpl implements DailyPriceService {
     @Value("${fastapi.access-key}")
     private String fastApiAccessKey;
 
-    public DailyPriceServiceImpl(DailyPriceRepository repo, RestTemplate rest, @Lazy DailyPriceService self) {
+    public DailyPriceServiceImpl(DailyPriceRepository repo, RestTemplate rest) {
         this.repo = repo;
         this.rest = rest;
-        this.self = self;
     }
 
     @Override
@@ -68,12 +65,8 @@ public class DailyPriceServiceImpl implements DailyPriceService {
                 "%s/bars/%s?start_date=%s&end_date=%s&timeframe=1Day",
                 fastApiBaseUrl, symbol, start, end
         );
-        ResponseEntity<BarDataDto> resp = rest.exchange(
-                url,
-                HttpMethod.GET,
-                entity,
-                BarDataDto.class
-        );
+
+        ResponseEntity<BarDataDto> resp = rest.exchange(url, HttpMethod.GET, entity, BarDataDto.class);
         BarDataDto barData = resp.getBody();
         if (barData == null) {
             throw new RuntimeException("No response from bars API for " + symbol);
@@ -96,21 +89,14 @@ public class DailyPriceServiceImpl implements DailyPriceService {
                 .orElseThrow(() -> new RuntimeException("No bar for date " + date));
 
         // 6) save to DB and return
-        DailyPriceDto dto = new DailyPriceDto(
-                symbol,
-                date,
-                BigDecimal.valueOf(match.getClose())
-        );
+        DailyPriceDto dto = new DailyPriceDto(symbol, date, BigDecimal.valueOf(match.getClose()));
         save(dto);
         return dto;
     }
 
     @Override
     public DailyPriceDto save(DailyPriceDto dto) {
-        DailyPrice entity = new DailyPrice(
-                new DailyPriceId(dto.getSymbol(), dto.getDate()),
-                dto.getClosingPrice()
-        );
+        DailyPrice entity = new DailyPrice(new DailyPriceId(dto.getSymbol(), dto.getDate()), dto.getClosingPrice());
         repo.save(entity);
         return dto;
     }
@@ -129,13 +115,10 @@ public class DailyPriceServiceImpl implements DailyPriceService {
     @Override
     public List<DailyPriceDto> findRange(String symbol, LocalDate start, LocalDate end) {
         // 1) Bulk-load any already-cached prices
-        List<DailyPrice> cached = repo
-                .findByIdSymbolAndIdDateBetweenOrderByIdDateAsc(symbol, start, end);
+        List<DailyPrice> cached = repo.findByIdSymbolAndIdDateBetweenOrderByIdDateAsc(symbol, start, end);
 
         // Convert to DTOs and track which dates we have
-        Set<LocalDate> haveDates = cached.stream()
-                .map(e -> e.getId().getDate())
-                .collect(Collectors.toSet());
+        Set<LocalDate> haveDates = cached.stream().map(e -> e.getId().getDate()).collect(Collectors.toSet());
 
         List<DailyPriceDto> result = cached.stream()
                 .map(e -> new DailyPriceDto(
@@ -164,9 +147,7 @@ public class DailyPriceServiceImpl implements DailyPriceService {
                     fastApiBaseUrl, symbol, start, end
             );
 
-            ResponseEntity<BarDataDto> resp = rest.exchange(
-                    url, HttpMethod.GET, entity, BarDataDto.class
-            );
+            ResponseEntity<BarDataDto> resp = rest.exchange(url, HttpMethod.GET, entity, BarDataDto.class);
             BarDataDto barData = resp.getBody();
             if (barData == null || barData.getBars() == null) {
                 throw new RuntimeException("Failed to fetch bar data for " + symbol);
@@ -177,15 +158,10 @@ public class DailyPriceServiceImpl implements DailyPriceService {
             // 4) For each returned bar whose date is missing, create an entity + DTO
             List<DailyPrice> toSave = new ArrayList<>();
             for (BarDto b : bars) {
-                LocalDate barDate = b.getTimestamp()
-                        .atZone(ZoneOffset.UTC)
-                        .toLocalDate();
+                LocalDate barDate = b.getTimestamp().atZone(ZoneOffset.UTC).toLocalDate();
                 if (missing.contains(barDate)) {
                     DailyPriceId dpId = new DailyPriceId(symbol, barDate);
-                    DailyPrice priceEntity = new DailyPrice(
-                            dpId,
-                            BigDecimal.valueOf(b.getClose())
-                    );
+                    DailyPrice priceEntity = new DailyPrice(dpId, BigDecimal.valueOf(b.getClose()));
                     toSave.add(priceEntity);
                     result.add(new DailyPriceDto(symbol, barDate, priceEntity.getClosingPrice()));
                 }

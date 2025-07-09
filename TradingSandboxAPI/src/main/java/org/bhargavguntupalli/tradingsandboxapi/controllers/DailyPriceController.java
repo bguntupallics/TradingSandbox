@@ -18,22 +18,10 @@ public class DailyPriceController {
         this.svc = svc;
     }
 
-    @PostMapping
-    public ResponseEntity<DailyPriceDto> create(@RequestBody DailyPriceDto dto) {
-        return ResponseEntity.ok(svc.save(dto));
-    }
-
-    @GetMapping("/{symbol}")
-    public ResponseEntity<List<DailyPriceDto>> listBySymbol(@PathVariable String symbol) {
-        return ResponseEntity.ok(svc.findBySymbol(symbol));
-    }
-
     @GetMapping("/{symbol}/{date}")
     public ResponseEntity<DailyPriceDto> getOne(@PathVariable String symbol, @PathVariable LocalDate date) {
         DailyPriceDto found = svc.findOne(symbol, date);
-        return found != null
-                ? ResponseEntity.ok(found)
-                : ResponseEntity.notFound().build();
+        return found != null ? ResponseEntity.ok(found) : ResponseEntity.notFound().build();
     }
 
     @GetMapping("/{symbol}/last-week")
