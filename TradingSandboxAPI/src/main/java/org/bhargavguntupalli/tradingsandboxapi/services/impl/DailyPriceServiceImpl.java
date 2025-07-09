@@ -1,9 +1,6 @@
 package org.bhargavguntupalli.tradingsandboxapi.services.impl;
 
-import org.bhargavguntupalli.tradingsandboxapi.dto.BarDataDto;
-import org.bhargavguntupalli.tradingsandboxapi.dto.BarDto;
-import org.bhargavguntupalli.tradingsandboxapi.dto.DailyPriceDto;
-import org.bhargavguntupalli.tradingsandboxapi.dto.TradeResponseDto;
+import org.bhargavguntupalli.tradingsandboxapi.dto.*;
 import org.bhargavguntupalli.tradingsandboxapi.models.DailyPrice;
 import org.bhargavguntupalli.tradingsandboxapi.models.DailyPriceId;
 import org.bhargavguntupalli.tradingsandboxapi.repositories.DailyPriceRepository;
@@ -190,6 +187,23 @@ public class DailyPriceServiceImpl implements DailyPriceService {
             throw new RuntimeException("Failed to fetch latest trade for " + symbol + ": HTTP " + resp.getStatusCode());
         } else {
             resp.getBody();
+        }
+
+        return resp.getBody();
+    }
+
+    @Override
+    public MarketStatusDto fetchMarketStatus() {
+        String url = String.format("%s/market-status", fastApiBaseUrl);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-ACCESS-KEY", fastApiAccessKey);
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        ResponseEntity<MarketStatusDto> resp = rest.exchange(url, HttpMethod.GET, entity, MarketStatusDto.class);
+
+        if(!resp.getStatusCode().is2xxSuccessful()) {
+            throw new RuntimeException("Failed to fetch market status: HTTP " + resp.getStatusCode());
         }
 
         return resp.getBody();

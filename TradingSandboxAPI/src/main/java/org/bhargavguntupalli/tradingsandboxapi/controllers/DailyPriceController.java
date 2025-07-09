@@ -1,6 +1,7 @@
 package org.bhargavguntupalli.tradingsandboxapi.controllers;
 
 import org.bhargavguntupalli.tradingsandboxapi.dto.DailyPriceDto;
+import org.bhargavguntupalli.tradingsandboxapi.dto.MarketStatusDto;
 import org.bhargavguntupalli.tradingsandboxapi.dto.TradeResponseDto;
 import org.bhargavguntupalli.tradingsandboxapi.services.DailyPriceService;
 import org.springframework.http.ResponseEntity;
@@ -46,7 +47,13 @@ public class DailyPriceController {
     }
 
     @GetMapping("/{symbol}/latest-trade")
-    public TradeResponseDto latestTrade(@PathVariable String symbol) {
-        return svc.getLatestTrade(symbol);
+    public ResponseEntity<TradeResponseDto> latestTrade(@PathVariable String symbol) {
+        return ResponseEntity.ok(svc.getLatestTrade(symbol));
     }
+
+    @GetMapping("/market-status")
+    public ResponseEntity<MarketStatusDto> getMarketStatus() {
+        MarketStatusDto dto = svc.fetchMarketStatus();
+        return ResponseEntity.ok(dto);
+     }
 }

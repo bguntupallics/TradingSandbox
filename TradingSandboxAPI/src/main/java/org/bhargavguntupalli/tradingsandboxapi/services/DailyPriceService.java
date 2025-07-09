@@ -1,6 +1,7 @@
 package org.bhargavguntupalli.tradingsandboxapi.services;
 
 import org.bhargavguntupalli.tradingsandboxapi.dto.DailyPriceDto;
+import org.bhargavguntupalli.tradingsandboxapi.dto.MarketStatusDto;
 import org.bhargavguntupalli.tradingsandboxapi.dto.TradeResponseDto;
 
 import java.time.LocalDate;
@@ -12,4 +13,5 @@ public interface DailyPriceService {
     DailyPriceDto findOne(String symbol, LocalDate date);
     List<DailyPriceDto> findRange(String symbol, LocalDate start, LocalDate end);
     TradeResponseDto getLatestTrade(String symbol);
+    MarketStatusDto fetchMarketStatus();
 }
