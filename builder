@@ -16,7 +16,7 @@ else
     # Default values
     API_PORT=8080
     FRONTEND_PORT=5173
-    DATA_PORT=8001
+    DATA_PORT=8000
     API_DIR="TradingSandboxAPI"
     FRONTEND_DIR="TradingSandbox-FrontEnd"
     DATA_DIR="DataAcquisition"
@@ -434,8 +434,8 @@ case "$1" in
         fi
 
         echo -e "\n${BLUE}DataAcquisition (uvicorn):${NC}"
-        if lsof -ti:${DATA_PORT:-8001} >/dev/null 2>&1; then
-            echo "  ✓ Running on port ${DATA_PORT:-8001}"
+        if lsof -ti:${DATA_PORT:-8000} >/dev/null 2>&1; then
+            echo "  ✓ Running on port ${DATA_PORT:-8000}"
             pgrep -f "uvicorn" | head -1 | awk '{print "  PID:", $1}'
         else
             echo "  Not running"
@@ -498,11 +498,11 @@ case "$1" in
         log_info "Stopping DataAcquisition (uvicorn)..."
         pkill -9 -f "uvicorn" 2>/dev/null || true
         pkill -9 -f "python.*DataAcquisition" 2>/dev/null || true
-        kill_port ${DATA_PORT:-8001} "DataAcquisition"
+        kill_port ${DATA_PORT:-8000} "DataAcquisition"
 
         # Verify all ports are free
         ALL_STOPPED=true
-        for port in ${API_PORT:-8080} ${FRONTEND_PORT:-5173} ${DATA_PORT:-8001}; do
+        for port in ${API_PORT:-8080} ${FRONTEND_PORT:-5173} ${DATA_PORT:-8000}; do
             if lsof -ti:$port >/dev/null 2>&1; then
                 log_error "Port $port still in use"
                 ALL_STOPPED=false

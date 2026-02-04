@@ -16,8 +16,8 @@ spring:
 
 # Test configuration - no real external services needed
 fastapi:
-  base-url: http://localhost:8001
-  access-key: test-key
+  base-url: http://localhost:8000
+  access-key: test-access-key
 
 jwt:
   secret: test-jwt-secret-key-for-testing-only
