@@ -418,22 +418,25 @@ case "$1" in
         log_info "Checking TradingSandbox service status..."
 
         echo -e "\n${BLUE}API (Spring Boot):${NC}"
-        if pgrep -f "spring-boot:run" > /dev/null; then
-            pgrep -fa "spring-boot:run" | head -1
+        if lsof -ti:${API_PORT:-8080} >/dev/null 2>&1; then
+            echo "  ✓ Running on port ${API_PORT:-8080}"
+            pgrep -fa "spring-boot:run" | head -1 | awk '{print "  PID:", $1}'
         else
             echo "  Not running"
         fi
 
         echo -e "\n${BLUE}Frontend (Vite):${NC}"
-        if pgrep -f "vite.*TradingSandbox-FrontEnd" > /dev/null; then
-            pgrep -fa "vite.*TradingSandbox-FrontEnd" | head -1
+        if lsof -ti:${FRONTEND_PORT:-5173} >/dev/null 2>&1; then
+            echo "  ✓ Running on port ${FRONTEND_PORT:-5173}"
+            pgrep -f "vite" | head -1 | awk '{print "  PID:", $1}'
         else
             echo "  Not running"
         fi
 
         echo -e "\n${BLUE}DataAcquisition (uvicorn):${NC}"
-        if pgrep -f "uvicorn.*DataAcquisition" > /dev/null; then
-            pgrep -fa "uvicorn.*DataAcquisition" | head -1
+        if lsof -ti:${DATA_PORT:-8001} >/dev/null 2>&1; then
+            echo "  ✓ Running on port ${DATA_PORT:-8001}"
+            pgrep -f "uvicorn" | head -1 | awk '{print "  PID:", $1}'
         else
             echo "  Not running"
         fi
@@ -442,20 +445,76 @@ case "$1" in
     stop)
         log_warn "Stopping TradingSandbox services..."
 
-        # Only kill our specific services by matching exact patterns
+        # Function to kill by port with retry
+        kill_port() {
+            local port=$1
+            local service_name=$2
+            local max_attempts=3
+            local attempt=1
+
+            while [ $attempt -le $max_attempts ]; do
+                if lsof -ti:$port >/dev/null 2>&1; then
+                    if [ $attempt -eq 1 ]; then
+                        # First attempt: graceful SIGTERM
+                        lsof -ti:$port 2>/dev/null | xargs -r kill 2>/dev/null || true
+                        sleep 0.5
+                    else
+                        # Subsequent attempts: forceful SIGKILL
+                        lsof -ti:$port 2>/dev/null | xargs -r kill -9 2>/dev/null || true
+                        sleep 0.5
+                    fi
+
+                    # Check if port is now free
+                    if ! lsof -ti:$port >/dev/null 2>&1; then
+                        return 0
+                    fi
+                    attempt=$((attempt + 1))
+                else
+                    return 0
+                fi
+            done
+
+            # Final check and warning
+            if lsof -ti:$port >/dev/null 2>&1; then
+                log_error "$service_name still running on port $port after $max_attempts attempts"
+                return 1
+            fi
+            return 0
+        }
+
+        # Kill API (Spring Boot)
         log_info "Stopping API (Spring Boot)..."
-        pkill -f "spring-boot:run" 2>/dev/null || true
+        pkill -9 -f "spring-boot:run" 2>/dev/null || true
+        pkill -9 -f "TradingSandboxAPI" 2>/dev/null || true
+        kill_port ${API_PORT:-8080} "API"
 
+        # Kill Frontend (Vite)
         log_info "Stopping Frontend (Vite)..."
-        pkill -f "vite.*TradingSandbox-FrontEnd" 2>/dev/null || true
+        pkill -9 -f "vite" 2>/dev/null || true
+        pkill -9 -f "node.*TradingSandbox-FrontEnd" 2>/dev/null || true
+        kill_port ${FRONTEND_PORT:-5173} "Frontend"
 
+        # Kill DataAcquisition (uvicorn)
         log_info "Stopping DataAcquisition (uvicorn)..."
-        pkill -f "uvicorn.*DataAcquisition" 2>/dev/null || true
+        pkill -9 -f "uvicorn" 2>/dev/null || true
+        pkill -9 -f "python.*DataAcquisition" 2>/dev/null || true
+        kill_port ${DATA_PORT:-8001} "DataAcquisition"
 
-        # Wait a moment for graceful shutdown
-        sleep 1
+        # Verify all ports are free
+        ALL_STOPPED=true
+        for port in ${API_PORT:-8080} ${FRONTEND_PORT:-5173} ${DATA_PORT:-8001}; do
+            if lsof -ti:$port >/dev/null 2>&1; then
+                log_error "Port $port still in use"
+                ALL_STOPPED=false
+            fi
+        done
 
-        log_success "TradingSandbox services stopped"
+        if [ "$ALL_STOPPED" = "true" ]; then
+            log_success "All services stopped and ports freed"
+        else
+            log_error "Some services may still be running. Run './builder status' to check"
+            exit 1
+        fi
         ;;
 
     # Help

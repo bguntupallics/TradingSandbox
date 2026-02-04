@@ -1,4 +1,7 @@
 spring:
+  docker:
+    compose:
+      enabled: false  # Disable auto-start of docker-compose
   datasource:
     url: ${POSTGRES_URL}
     username: ${POSTGRES_USER}
