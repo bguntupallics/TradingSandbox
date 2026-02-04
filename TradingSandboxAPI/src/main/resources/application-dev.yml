@@ -20,11 +20,11 @@ logging:
     org.springframework.security: DEBUG
 
 admin:
-  username: admin
-  password: admin
-  first-name: admin
-  last-name: admin
-  email: admin@admin.com
+  username: ${ADMIN_USERNAME}
+  password: ${ADMIN_PASSWORD}
+  first-name: ${ADMIN_FIRST_NAME}
+  last-name: ${ADMIN_LAST_NAME}
+  email: ${ADMIN_EMAIL}
 
 fastapi:
   base-url: ${FASTAPI_BASE_URL}
@@ -33,3 +33,7 @@ fastapi:
 jwt:
   secret: ${JWT_SECRET}
   expiration-ms: ${JWT_EXPIRATION_MS:3600000}
+
+rate-limit:
+  max-requests: 10
+  window-ms: 60000

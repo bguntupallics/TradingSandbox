@@ -1,14 +1,18 @@
+import os
 from datetime import datetime
 
 import requests
+from dotenv import load_dotenv
 from alpaca.data.historical import StockHistoricalDataClient
 from alpaca.data.requests import StockBarsRequest
 from alpaca.data.timeframe import TimeFrame
 
+load_dotenv()
+
 url = "https://data.alpaca.markets/v2/stocks/AMZN/trades/latest?feed=iex&currency=USD"
 
-key = 'AKEY0EN07KI2UYR1O0AC'
-secret = '5tBgwsCpQDDDTMQ6Ow6of3AvkxRZOmOedJRakZf9'
+key = os.getenv("ALPACA_API_KEY")
+secret = os.getenv("ALPACA_API_SECRET")
 
 headers = {
     "accept": "application/json",

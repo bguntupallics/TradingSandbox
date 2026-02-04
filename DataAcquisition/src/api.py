@@ -9,9 +9,16 @@ from alpaca.data.historical import StockHistoricalDataClient
 from alpaca.data.requests import StockBarsRequest
 from alpaca.data.timeframe import TimeFrame
 import os
+import logging
 from dotenv import load_dotenv
 import hashlib
 import hmac
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from starlette.requests import Request
+
+logger = logging.getLogger(__name__)
 
 # ─── Environment ────────────────────────────────────────────────────────────
 load_dotenv()  # <-- this reads .env into os.environ
@@ -42,6 +49,9 @@ def verify_api_key(provided_key: str = Security(api_key_header)):
     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid API key")
 
 
+# ─── Rate limiting ───────────────────────────────────────────────────────────────
+limiter = Limiter(key_func=get_remote_address)
+
 # ─── App instantiation ───────────────────────────────────────────────────────────
 app = FastAPI(
     title="Data Acquisition API for TradingSandbox",
@@ -49,6 +59,9 @@ app = FastAPI(
     version="1.0.0",
     dependencies=[Depends(verify_api_key)]  # <-- enforce API-key on every route
 )
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Initialize Alpaca client for historical bars
 client = StockHistoricalDataClient(api_key=KEY, secret_key=SECRET)
@@ -89,14 +102,16 @@ class MarketStatus(BaseModel):
 
 # ─── Endpoints ─────────────────────────────────────────────────────────────────
 @app.get("/")
-def root():
+@limiter.limit("30/minute")
+def root(request: Request):
     return {
         "message": "Welcome to TradingSandbox Data Acquisition, Powered by Alpaca Markets :)"
     }
 
 
 @app.get("/latest-trade/{symbol}", response_model=SimplifiedTrade, response_model_by_alias=False)
-def get_latest_trade(symbol: str):
+@limiter.limit("30/minute")
+def get_latest_trade(symbol: str, request: Request):
     """Get the latest trade data for a specific stock symbol"""
     url = f"https://data.alpaca.markets/v2/stocks/{symbol}/trades/latest?feed=iex&currency=USD"
     headers = {
@@ -121,10 +136,12 @@ def get_latest_trade(symbol: str):
 
 
 @app.get("/bars/{symbol}", response_model=BarData)
+@limiter.limit("20/minute")
 def get_stock_bars(
         symbol: str,
         start_date: str,
         end_date: str,
+        request: Request,
         timeframe: Optional[str] = "1Day"
 ):
     """Get historical bar data for a specific stock symbol
@@ -166,7 +183,7 @@ def get_stock_bars(
     elif timeframe == "15Min":
         multiplier = 15
 
-    request = StockBarsRequest(
+    bar_request = StockBarsRequest(
         symbol_or_symbols=symbol,
         timeframe=tf,
         multiplier=multiplier if timeframe in ["5Min", "15Min"] else None,
@@ -175,7 +192,7 @@ def get_stock_bars(
     )
 
     try:
-        bars = client.get_stock_bars(request)
+        bars = client.get_stock_bars(bar_request)
         return {
             "symbol": symbol,
             "start_date": start,
@@ -184,11 +201,16 @@ def get_stock_bars(
             "bars": bars.data
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Error fetching bars for %s", symbol)
+        raise HTTPException(
+            status_code=500,
+            detail="An internal error occurred while fetching bar data."
+        )
 
 
 @app.get("/market-cap/{symbol}", response_model=MarketCapResponse)
-def get_market_cap(symbol: str):
+@limiter.limit("20/minute")
+def get_market_cap(symbol: str, request: Request):
     symbol = symbol.upper()
     ticker = yf.Ticker(symbol)
 
@@ -209,7 +231,8 @@ def get_market_cap(symbol: str):
 
 
 @app.get("/market-status", response_model=MarketStatus)
-def get_market_status():
+@limiter.limit("30/minute")
+def get_market_status(request: Request):
     """Return current market open status and upcoming open/close times."""
     url = "https://api.alpaca.markets/v2/clock"
     headers = {
