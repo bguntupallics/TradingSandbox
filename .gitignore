@@ -1,0 +1,40 @@
+# Environment variables
+.env
+*.env
+!.env.example
+
+# Build outputs
+target/
+dist/
+build/
+*.jar
+*.war
+*.ear
+*.class
+
+# Dependencies
+node_modules/
+venv/
+.pytest_cache/
+__pycache__/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.bak
+*.cache
