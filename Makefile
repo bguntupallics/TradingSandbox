@@ -161,20 +161,24 @@ install: ## Install dependencies for all services
 ##@ Utility Commands
 
 status: ## Show running services
-	@echo "$(BLUE)[INFO]$(NC) Checking service status..."
-	@echo "API (Java):"
-	@pgrep -fa java | grep -i spring || echo "  Not running"
-	@echo "\nFrontend (Node):"
-	@pgrep -fa node | grep -i vite || echo "  Not running"
-	@echo "\nDataAcquisition (Python):"
-	@pgrep -fa python | grep -i uvicorn || echo "  Not running"
+	@echo "$(BLUE)[INFO]$(NC) Checking TradingSandbox service status..."
+	@echo "\n$(BLUE)API (Spring Boot):$(NC)"
+	@pgrep -f "spring-boot:run" > /dev/null && pgrep -fa "spring-boot:run" | head -1 || echo "  Not running"
+	@echo "\n$(BLUE)Frontend (Vite):$(NC)"
+	@pgrep -f "vite.*TradingSandbox-FrontEnd" > /dev/null && pgrep -fa "vite.*TradingSandbox-FrontEnd" | head -1 || echo "  Not running"
+	@echo "\n$(BLUE)DataAcquisition (uvicorn):$(NC)"
+	@pgrep -f "uvicorn.*DataAcquisition" > /dev/null && pgrep -fa "uvicorn.*DataAcquisition" | head -1 || echo "  Not running"
 
 stop: ## Stop all running services
-	@echo "$(YELLOW)[WARN]$(NC) Stopping all services..."
-	@killall java 2>/dev/null || true
-	@killall node 2>/dev/null || true
-	@pkill -f uvicorn 2>/dev/null || true
-	@echo "$(GREEN)[SUCCESS]$(NC) All services stopped"
+	@echo "$(YELLOW)[WARN]$(NC) Stopping TradingSandbox services..."
+	@echo "$(BLUE)[INFO]$(NC) Stopping API (Spring Boot)..."
+	@pkill -f "spring-boot:run" 2>/dev/null || true
+	@echo "$(BLUE)[INFO]$(NC) Stopping Frontend (Vite)..."
+	@pkill -f "vite.*TradingSandbox-FrontEnd" 2>/dev/null || true
+	@echo "$(BLUE)[INFO]$(NC) Stopping DataAcquisition (uvicorn)..."
+	@pkill -f "uvicorn.*DataAcquisition" 2>/dev/null || true
+	@sleep 1
+	@echo "$(GREEN)[SUCCESS]$(NC) TradingSandbox services stopped"
 
 logs-api: ## Show API logs
 	@cd $(API_DIR) && tail -f logs/spring.log 2>/dev/null || echo "No log file found"

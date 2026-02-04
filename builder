@@ -149,37 +149,78 @@ run_all() {
     log_info "Starting all services..."
     load_env
 
+    # Track PIDs for cleanup
+    PIDS=()
+
+    # Function to cleanup on failure
+    cleanup_on_failure() {
+        log_error "Service failed to start. Stopping all services..."
+        for pid in "${PIDS[@]}"; do
+            kill "$pid" 2>/dev/null || true
+        done
+        exit 1
+    }
+
     # Start API in background
     log_info "Starting API..."
     cd "$API_DIR"
     ./mvnw spring-boot:run &
     API_PID=$!
+    PIDS+=($API_PID)
     cd ..
+
+    # Check if API started
+    sleep 2
+    if ! kill -0 "$API_PID" 2>/dev/null; then
+        log_error "API failed to start"
+        cleanup_on_failure
+    fi
+    log_success "API started (PID: $API_PID)"
 
     # Start Data service in background
     log_info "Starting DataAcquisition..."
+    if [ ! -f "$DATA_DIR/$PYTHON_VENV_DIR/bin/activate" ]; then
+        log_error "DataAcquisition venv not found. Run './builder build-data' first."
+        cleanup_on_failure
+    fi
+
     cd "$DATA_DIR"
     source "$PYTHON_VENV_DIR/bin/activate"
     uvicorn src.api:app $UVICORN_RELOAD --host 0.0.0.0 --port "$DATA_PORT" &
     DATA_PID=$!
+    PIDS+=($DATA_PID)
     deactivate
     cd ..
 
-    # Start Frontend (foreground)
+    # Check if Data service started
+    sleep 2
+    if ! kill -0 "$DATA_PID" 2>/dev/null; then
+        log_error "DataAcquisition failed to start"
+        cleanup_on_failure
+    fi
+    log_success "DataAcquisition started (PID: $DATA_PID)"
+
+    # Start Frontend
     log_info "Starting Frontend..."
     cd "$FRONTEND_DIR"
     npm run dev &
     FRONTEND_PID=$!
+    PIDS+=($FRONTEND_PID)
     cd ..
 
-    log_success "All services started!"
-    log_info "API PID: $API_PID"
-    log_info "DataAcquisition PID: $DATA_PID"
-    log_info "Frontend PID: $FRONTEND_PID"
+    # Check if Frontend started
+    sleep 2
+    if ! kill -0 "$FRONTEND_PID" 2>/dev/null; then
+        log_error "Frontend failed to start"
+        cleanup_on_failure
+    fi
+    log_success "Frontend started (PID: $FRONTEND_PID)"
+
+    log_success "All services started successfully!"
     log_warn "Press Ctrl+C to stop all services"
 
     # Wait for interrupt
-    trap "log_info 'Stopping all services...'; kill $API_PID $DATA_PID $FRONTEND_PID 2>/dev/null; exit 0" INT TERM
+    trap "log_info 'Stopping all services...'; kill ${PIDS[@]} 2>/dev/null; exit 0" INT TERM
     wait
 }
 
@@ -374,21 +415,47 @@ case "$1" in
         ;;
 
     status)
-        log_info "Checking service status..."
-        echo -e "\n${BLUE}API (Java):${NC}"
-        pgrep -fa java | grep -i spring || echo "  Not running"
-        echo -e "\n${BLUE}Frontend (Node):${NC}"
-        pgrep -fa node | grep -i vite || echo "  Not running"
-        echo -e "\n${BLUE}DataAcquisition (Python):${NC}"
-        pgrep -fa python | grep -i uvicorn || echo "  Not running"
+        log_info "Checking TradingSandbox service status..."
+
+        echo -e "\n${BLUE}API (Spring Boot):${NC}"
+        if pgrep -f "spring-boot:run" > /dev/null; then
+            pgrep -fa "spring-boot:run" | head -1
+        else
+            echo "  Not running"
+        fi
+
+        echo -e "\n${BLUE}Frontend (Vite):${NC}"
+        if pgrep -f "vite.*TradingSandbox-FrontEnd" > /dev/null; then
+            pgrep -fa "vite.*TradingSandbox-FrontEnd" | head -1
+        else
+            echo "  Not running"
+        fi
+
+        echo -e "\n${BLUE}DataAcquisition (uvicorn):${NC}"
+        if pgrep -f "uvicorn.*DataAcquisition" > /dev/null; then
+            pgrep -fa "uvicorn.*DataAcquisition" | head -1
+        else
+            echo "  Not running"
+        fi
         ;;
 
     stop)
-        log_warn "Stopping all services..."
-        killall java 2>/dev/null || true
-        killall node 2>/dev/null || true
-        pkill -f uvicorn 2>/dev/null || true
-        log_success "All services stopped"
+        log_warn "Stopping TradingSandbox services..."
+
+        # Only kill our specific services by matching exact patterns
+        log_info "Stopping API (Spring Boot)..."
+        pkill -f "spring-boot:run" 2>/dev/null || true
+
+        log_info "Stopping Frontend (Vite)..."
+        pkill -f "vite.*TradingSandbox-FrontEnd" 2>/dev/null || true
+
+        log_info "Stopping DataAcquisition (uvicorn)..."
+        pkill -f "uvicorn.*DataAcquisition" 2>/dev/null || true
+
+        # Wait a moment for graceful shutdown
+        sleep 1
+
+        log_success "TradingSandbox services stopped"
         ;;
 
     # Help
