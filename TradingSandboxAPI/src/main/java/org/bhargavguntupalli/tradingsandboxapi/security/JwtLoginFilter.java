@@ -57,5 +57,17 @@ public class JwtLoginFilter extends UsernamePasswordAuthenticationFilter {
         body.put("token", token);
         new ObjectMapper().writeValue(response.getOutputStream(), body);
     }
+
+    @Override
+    protected void unsuccessfulAuthentication(HttpServletRequest request,
+                                              HttpServletResponse response,
+                                              AuthenticationException failed)
+            throws IOException, ServletException {
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        Map<String, String> body = new HashMap<>();
+        body.put("error", "Invalid username or password");
+        new ObjectMapper().writeValue(response.getOutputStream(), body);
+    }
 }
 

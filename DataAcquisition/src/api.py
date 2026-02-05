@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends, Security, status
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Security, status
 from fastapi.security.api_key import APIKeyHeader
 from datetime import datetime
 from typing import Optional
@@ -57,11 +57,19 @@ app = FastAPI(
     title="Data Acquisition API for TradingSandbox",
     description="API for fetching stock data from Alpaca",
     version="1.0.0",
-    dependencies=[Depends(verify_api_key)]  # <-- enforce API-key on every route
 )
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# ─── Health check (no auth required) ─────────────────────────────────────────────
+@app.get("/health", include_in_schema=False)
+def health_check():
+    """Health check endpoint for service orchestration (no auth required)"""
+    return {"status": "ok"}
+
+# ─── Protected router (API key required) ─────────────────────────────────────────
+api_router = APIRouter(dependencies=[Depends(verify_api_key)])
 
 # Initialize Alpaca client for historical bars
 client = StockHistoricalDataClient(api_key=KEY, secret_key=SECRET)
@@ -101,7 +109,7 @@ class MarketStatus(BaseModel):
 
 
 # ─── Endpoints ─────────────────────────────────────────────────────────────────
-@app.get("/")
+@api_router.get("/")
 @limiter.limit("30/minute")
 def root(request: Request):
     return {
@@ -109,7 +117,7 @@ def root(request: Request):
     }
 
 
-@app.get("/latest-trade/{symbol}", response_model=SimplifiedTrade, response_model_by_alias=False)
+@api_router.get("/latest-trade/{symbol}", response_model=SimplifiedTrade, response_model_by_alias=False)
 @limiter.limit("30/minute")
 def get_latest_trade(symbol: str, request: Request):
     """Get the latest trade data for a specific stock symbol"""
@@ -135,7 +143,7 @@ def get_latest_trade(symbol: str, request: Request):
     return trade_obj
 
 
-@app.get("/bars/{symbol}", response_model=BarData)
+@api_router.get("/bars/{symbol}", response_model=BarData)
 @limiter.limit("20/minute")
 def get_stock_bars(
         symbol: str,
@@ -208,7 +216,7 @@ def get_stock_bars(
         )
 
 
-@app.get("/market-cap/{symbol}", response_model=MarketCapResponse)
+@api_router.get("/market-cap/{symbol}", response_model=MarketCapResponse)
 @limiter.limit("20/minute")
 def get_market_cap(symbol: str, request: Request):
     symbol = symbol.upper()
@@ -230,7 +238,7 @@ def get_market_cap(symbol: str, request: Request):
     return MarketCapResponse(symbol=symbol, market_cap=market_cap, currency=currency, timestamp=datetime.utcnow())
 
 
-@app.get("/market-status", response_model=MarketStatus)
+@api_router.get("/market-status", response_model=MarketStatus)
 @limiter.limit("30/minute")
 def get_market_status(request: Request):
     """Return current market open status and upcoming open/close times."""
@@ -246,3 +254,7 @@ def get_market_status(request: Request):
         raise HTTPException(status_code=resp.status_code, detail="Failed to fetch market clock from Alpaca")
 
     return resp.json()
+
+
+# ─── Include protected router ────────────────────────────────────────────────────
+app.include_router(api_router)

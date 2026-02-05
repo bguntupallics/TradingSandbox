@@ -122,6 +122,29 @@ build_all() {
     build_frontend
     build_data
     log_success "All services built successfully!"
+    log_info "Testing all services..."
+    test_all
+}
+
+# Health check helper
+wait_for_health() {
+    local url=$1
+    local service_name=$2
+    local max_attempts=${3:-30}
+    local attempt=1
+
+    log_info "Waiting for $service_name to be ready..."
+    while [ $attempt -le $max_attempts ]; do
+        if curl -s "$url" >/dev/null 2>&1; then
+            log_success "$service_name is ready"
+            return 0
+        fi
+        sleep 1
+        attempt=$((attempt + 1))
+    done
+
+    log_error "$service_name failed to become ready after $max_attempts seconds"
+    return 1
 }
 
 # Run commands
@@ -161,22 +184,6 @@ run_all() {
         exit 1
     }
 
-    # Start API in background
-    log_info "Starting API..."
-    cd "$API_DIR"
-    ./mvnw spring-boot:run &
-    API_PID=$!
-    PIDS+=($API_PID)
-    cd ..
-
-    # Check if API started
-    sleep 2
-    if ! kill -0 "$API_PID" 2>/dev/null; then
-        log_error "API failed to start"
-        cleanup_on_failure
-    fi
-    log_success "API started (PID: $API_PID)"
-
     # Start Data service in background
     log_info "Starting DataAcquisition..."
     if [ ! -f "$DATA_DIR/$PYTHON_VENV_DIR/bin/activate" ]; then
@@ -192,13 +199,39 @@ run_all() {
     deactivate
     cd ..
 
-    # Check if Data service started
-    sleep 2
+    # Check if Data service process started
+    sleep 1
     if ! kill -0 "$DATA_PID" 2>/dev/null; then
         log_error "DataAcquisition failed to start"
         cleanup_on_failure
     fi
-    log_success "DataAcquisition started (PID: $DATA_PID)"
+    log_info "DataAcquisition process started (PID: $DATA_PID)"
+
+    # Wait for Data API to be ready
+    if ! wait_for_health "http://localhost:$DATA_PORT/health" "DataAcquisition" 30; then
+        cleanup_on_failure
+    fi
+
+    # Start API in background
+    log_info "Starting API..."
+    cd "$API_DIR"
+    ./mvnw spring-boot:run &
+    API_PID=$!
+    PIDS+=($API_PID)
+    cd ..
+
+    # Check if API process started
+    sleep 1
+    if ! kill -0 "$API_PID" 2>/dev/null; then
+        log_error "API failed to start"
+        cleanup_on_failure
+    fi
+    log_info "API process started (PID: $API_PID)"
+
+    # Wait for Spring Boot API to be ready
+    if ! wait_for_health "http://localhost:$API_PORT/actuator/health" "API" 60; then
+        cleanup_on_failure
+    fi
 
     # Start Frontend
     log_info "Starting Frontend..."
@@ -219,8 +252,17 @@ run_all() {
     log_success "All services started successfully!"
     log_warn "Press Ctrl+C to stop all services"
 
+    # Cleanup function for trap
+    cleanup() {
+        log_info "Stopping all services..."
+        for pid in "${PIDS[@]}"; do
+            kill "$pid" 2>/dev/null || true
+        done
+        exit 0
+    }
+
     # Wait for interrupt
-    trap "log_info 'Stopping all services...'; kill ${PIDS[@]} 2>/dev/null; exit 0" INT TERM
+    trap cleanup INT TERM
     wait
 }
 
