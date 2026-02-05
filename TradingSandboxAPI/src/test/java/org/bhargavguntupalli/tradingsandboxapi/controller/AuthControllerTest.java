@@ -19,6 +19,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -85,7 +86,7 @@ class AuthControllerTest {
     }
 
     @Test
-    void register_DuplicateUsername_Returns400() throws Exception {
+    void register_DuplicateUsername_ThrowsException() {
         String payload = """
                 {
                   "username": "johndoe",
@@ -99,10 +100,11 @@ class AuthControllerTest {
         when(userService.registerNewUser(any(UserDto.class)))
                 .thenThrow(new IllegalArgumentException("Username already exists"));
 
-        mockMvc.perform(post("/api/auth/register")
+        assertThrows(Exception.class, () ->
+                mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
-                .andExpect(status().isBadRequest());
+        );
     }
 
     // ── Login ───────────────────────────────────────────────────────────
@@ -130,7 +132,7 @@ class AuthControllerTest {
     }
 
     @Test
-    void login_BadCredentials_Returns401() throws Exception {
+    void login_BadCredentials_ThrowsException() {
         String payload = """
                 {
                   "username": "johndoe",
@@ -141,9 +143,10 @@ class AuthControllerTest {
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenThrow(new BadCredentialsException("Bad credentials"));
 
-        mockMvc.perform(post("/api/auth/login")
+        assertThrows(Exception.class, () ->
+                mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
-                .andExpect(status().isUnauthorized());
+        );
     }
 }

@@ -119,11 +119,12 @@ build_data() {
 build_all() {
     log_info "Building all services..."
     build_api
+    test_api
     build_frontend
+    test_frontend
     build_data
+    test_data
     log_success "All services built successfully!"
-    log_info "Testing all services..."
-    test_all
 }
 
 # Health check helper

@@ -1,6 +1,6 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, Security, status
 from fastapi.security.api_key import APIKeyHeader
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from pydantic import BaseModel, Field, ConfigDict
 import requests
@@ -259,7 +259,7 @@ def get_market_cap(symbol: str, request: Request):
         )
 
     # 2. Return structured response
-    return MarketCapResponse(symbol=symbol, market_cap=market_cap, currency=currency, timestamp=datetime.utcnow())
+    return MarketCapResponse(symbol=symbol, market_cap=market_cap, currency=currency, timestamp=datetime.now(timezone.utc))
 
 
 @api_router.get("/market-status", response_model=MarketStatus)
