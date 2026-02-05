@@ -4,6 +4,8 @@ from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, Field, ConfigDict
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 import yfinance as yf
 from alpaca.data.historical import StockHistoricalDataClient
 from alpaca.data.requests import StockBarsRequest
@@ -74,6 +76,24 @@ api_router = APIRouter(dependencies=[Depends(verify_api_key)])
 # Initialize Alpaca client for historical bars
 client = StockHistoricalDataClient(api_key=KEY, secret_key=SECRET)
 
+# Create a requests session with retry logic for transient SSL errors
+def create_retry_session(retries=3, backoff_factor=0.5):
+    session = requests.Session()
+    retry = Retry(
+        total=retries,
+        read=retries,
+        connect=retries,
+        backoff_factor=backoff_factor,
+        status_forcelist=(500, 502, 503, 504),
+        allowed_methods=["GET"],
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+    return session
+
+http_session = create_retry_session()
+
 
 # ─── Models ────────────────────────────────────────────────────────────────────
 class SimplifiedTrade(BaseModel):
@@ -128,19 +148,23 @@ def get_latest_trade(symbol: str, request: Request):
         "APCA-API-SECRET-KEY": SECRET
     }
 
-    response = requests.get(url, headers=headers)
-    if response.status_code != 200:
+    try:
+        response = http_session.get(url, headers=headers, timeout=10)
+        if response.status_code != 200:
+            raise HTTPException(
+                status_code=response.status_code,
+                detail="Failed to fetch data from Alpaca"
+            )
+
+        data = response.json()
+        trade_obj = data["trade"]
+        return trade_obj
+    except requests.exceptions.RequestException as e:
+        logger.exception("Error fetching latest trade for %s: %s", symbol, str(e))
         raise HTTPException(
-            status_code=response.status_code,
-            detail="Failed to fetch data from Alpaca"
+            status_code=503,
+            detail="Alpaca API temporarily unavailable"
         )
-
-    data = response.json()
-    # extract the inner trade object
-    trade_obj = data["trade"]
-
-    # either return the dict directly:
-    return trade_obj
 
 
 @api_router.get("/bars/{symbol}", response_model=BarData)
@@ -249,11 +273,17 @@ def get_market_status(request: Request):
         "APCA-API-SECRET-KEY": SECRET,
     }
 
-    resp = requests.get(url, headers=headers)
-    if resp.status_code != 200:
-        raise HTTPException(status_code=resp.status_code, detail="Failed to fetch market clock from Alpaca")
-
-    return resp.json()
+    try:
+        resp = http_session.get(url, headers=headers, timeout=10)
+        if resp.status_code != 200:
+            raise HTTPException(status_code=resp.status_code, detail="Failed to fetch market clock from Alpaca")
+        return resp.json()
+    except requests.exceptions.RequestException as e:
+        logger.exception("Error fetching market status: %s", str(e))
+        raise HTTPException(
+            status_code=503,
+            detail="Alpaca API temporarily unavailable"
+        )
 
 
 # ─── Include protected router ────────────────────────────────────────────────────

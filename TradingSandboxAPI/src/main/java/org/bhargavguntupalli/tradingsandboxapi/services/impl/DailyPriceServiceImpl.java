@@ -16,7 +16,10 @@ import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -181,15 +184,18 @@ public class DailyPriceServiceImpl implements DailyPriceService {
         headers.set("X-ACCESS-KEY", fastApiAccessKey);
         HttpEntity<Void> entity = new HttpEntity<>(headers);
 
-        ResponseEntity<TradeResponseDto> resp = rest.exchange(url, HttpMethod.GET, entity, TradeResponseDto.class);
+        try {
+            ResponseEntity<TradeResponseDto> resp = rest.exchange(url, HttpMethod.GET, entity, TradeResponseDto.class);
 
-        if(!resp.getStatusCode().is2xxSuccessful()) {
-            throw new RuntimeException("Failed to fetch latest trade for " + symbol + ": HTTP " + resp.getStatusCode());
-        } else {
-            resp.getBody();
+            if (!resp.getStatusCode().is2xxSuccessful() || resp.getBody() == null) {
+                return null;
+            }
+
+            return resp.getBody();
+        } catch (Exception e) {
+            // Return null on FastAPI failure (transient errors like SSL issues)
+            return null;
         }
-
-        return resp.getBody();
     }
 
     @Override
@@ -207,5 +213,64 @@ public class DailyPriceServiceImpl implements DailyPriceService {
         }
 
         return resp.getBody();
+    }
+
+    @Override
+    public List<PriceDataDto> findByPeriod(String symbol, TimePeriod period) {
+        ZoneId nyZone = ZoneId.of("America/New_York");
+        LocalDateTime now = LocalDateTime.now(nyZone);
+        LocalDateTime start;
+
+        if (period == TimePeriod.ONE_DAY) {
+            // For intraday, start from market open (9:30 AM) today
+            start = now.toLocalDate().atTime(9, 30);
+        } else {
+            start = now.minusDays(period.getDaysBack());
+        }
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-ACCESS-KEY", fastApiAccessKey);
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        String url = String.format(
+                "%s/bars/%s?start_date=%s&end_date=%s&timeframe=%s",
+                fastApiBaseUrl, symbol,
+                start.toLocalDate(),
+                now.toLocalDate().plusDays(1),
+                period.getTimeframe()
+        );
+
+        BarDataDto barData;
+        try {
+            ResponseEntity<BarDataDto> resp = rest.exchange(url, HttpMethod.GET, entity, BarDataDto.class);
+            barData = resp.getBody();
+        } catch (Exception e) {
+            // Log and return empty on FastAPI failure (transient errors like SSL issues)
+            return Collections.emptyList();
+        }
+
+        if (barData == null || barData.getBars() == null) {
+            return Collections.emptyList();
+        }
+
+        List<BarDto> bars = barData.getBars().getOrDefault(symbol, Collections.emptyList());
+
+        // Choose date format based on period
+        DateTimeFormatter formatter;
+        if (period == TimePeriod.ONE_DAY || period == TimePeriod.ONE_WEEK) {
+            formatter = DateTimeFormatter.ofPattern("h:mm a");
+        } else {
+            formatter = DateTimeFormatter.ofPattern("M/d");
+        }
+
+        return bars.stream()
+                .map(bar -> new PriceDataDto(
+                        symbol,
+                        bar.getTimestamp(),
+                        formatter.format(bar.getTimestamp().atZone(nyZone)),
+                        BigDecimal.valueOf(bar.getClose())
+                ))
+                .sorted(Comparator.comparing(PriceDataDto::getTimestamp))
+                .toList();
     }
 }

@@ -34,3 +34,20 @@ export async function fetchWithJwt<T = never>(
 
     return (await res.json()) as T;
 }
+
+// Time period types and API function
+export type TimePeriod = '1D' | '1W' | '1M' | '3M';
+
+export interface PriceData {
+    symbol: string;
+    timestamp: string;
+    dateLabel: string;
+    closingPrice: number;
+}
+
+export async function fetchPricesByPeriod(
+    symbol: string,
+    period: TimePeriod
+): Promise<PriceData[]> {
+    return fetchWithJwt<PriceData[]>(`/api/prices/${symbol}/period/${period}`);
+}

@@ -318,3 +318,41 @@ select {
 .space-x-4 > * + * {
     margin-left: 1rem;
 }
+
+/*--------------------------------------------------------------
+7. Time Period Selector
+--------------------------------------------------------------*/
+.time-period-selector {
+    display: flex;
+    gap: 0.5rem;
+    margin: 1rem 0;
+    justify-content: center;
+}
+
+.period-btn {
+    background-color: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--input-border);
+    padding: 0.5rem 1rem;
+    border-radius: 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.period-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--text-primary);
+}
+
+.period-btn.active {
+    background-color: var(--button-hover);
+    color: var(--text-light);
+    border-color: var(--button-hover);
+}
+
+.period-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

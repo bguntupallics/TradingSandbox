@@ -2,6 +2,8 @@ package org.bhargavguntupalli.tradingsandboxapi.controllers;
 
 import org.bhargavguntupalli.tradingsandboxapi.dto.DailyPriceDto;
 import org.bhargavguntupalli.tradingsandboxapi.dto.MarketStatusDto;
+import org.bhargavguntupalli.tradingsandboxapi.dto.PriceDataDto;
+import org.bhargavguntupalli.tradingsandboxapi.dto.TimePeriod;
 import org.bhargavguntupalli.tradingsandboxapi.dto.TradeResponseDto;
 import org.bhargavguntupalli.tradingsandboxapi.services.DailyPriceService;
 import org.springframework.http.ResponseEntity;
@@ -48,7 +50,11 @@ public class DailyPriceController {
 
     @GetMapping("/{symbol}/latest-trade")
     public ResponseEntity<TradeResponseDto> latestTrade(@PathVariable String symbol) {
-        return ResponseEntity.ok(svc.getLatestTrade(symbol));
+        TradeResponseDto trade = svc.getLatestTrade(symbol);
+        if (trade == null) {
+            return ResponseEntity.status(503).build(); // Service temporarily unavailable
+        }
+        return ResponseEntity.ok(trade);
     }
 
     @GetMapping("/market-status")
@@ -56,4 +62,16 @@ public class DailyPriceController {
         MarketStatusDto dto = svc.fetchMarketStatus();
         return ResponseEntity.ok(dto);
      }
+
+    @GetMapping("/{symbol}/period/{period}")
+    public ResponseEntity<List<PriceDataDto>> getByPeriod(
+            @PathVariable String symbol,
+            @PathVariable String period
+    ) {
+        TimePeriod timePeriod = TimePeriod.fromLabel(period);
+        if (timePeriod == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok(svc.findByPeriod(symbol, timePeriod));
+    }
 }

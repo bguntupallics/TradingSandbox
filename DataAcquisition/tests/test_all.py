@@ -1,8 +1,8 @@
-import requests
 import os
 from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 
+import src.api as api_module
 from src.api import app, SimplifiedTrade
 
 load_dotenv()  # <-- this reads .env into os.environ
@@ -11,7 +11,7 @@ ACCESS_KEY = os.getenv("ACCESS_KEY")
 client = TestClient(app)
 
 
-# A helper stub for mocking requests.get
+# A helper stub for mocking http_session.get
 class DummyResponse:
     def __init__(self, json_data, status_code=200):
         self._json = json_data
@@ -36,11 +36,11 @@ def test_latest_trade_success(monkeypatch):
         }
     }
 
-    # Monkey-patch requests.get inside our endpoint to return DummyResponse
-    def fake_get(url, headers):
+    # Monkey-patch http_session.get inside our endpoint to return DummyResponse
+    def fake_get(url, headers, timeout=None):
         return DummyResponse(sample_api_payload, 200)
 
-    monkeypatch.setattr(requests, "get", fake_get)
+    monkeypatch.setattr(api_module.http_session, "get", fake_get)
 
     resp = client.get("/latest-trade/AMZN", headers={"X-ACCESS-KEY": ACCESS_KEY})
     assert resp.status_code == 200
@@ -67,10 +67,10 @@ def test_invalid_credentials(monkeypatch):
         }
     }
 
-    def fake_get(url, headers):
+    def fake_get(url, headers, timeout=None):
         return DummyResponse(sample_api_payload, 200)
 
-    monkeypatch.setattr(requests, "get", fake_get)
+    monkeypatch.setattr(api_module.http_session, "get", fake_get)
 
     resp = client.get("/latest-trade/AMZN", headers={"X-ACCESS-KEY": "invalid-key"})
 
@@ -78,11 +78,11 @@ def test_invalid_credentials(monkeypatch):
 
 
 def test_latest_trade_failure(monkeypatch):
-    # Patch requests.get to return a 401 Unauthorized
-    def fake_get(url, headers):
+    # Patch http_session.get to return a 401 Unauthorized
+    def fake_get(url, headers, timeout=None):
         return DummyResponse({"detail": "Unauthorized"}, 401)
 
-    monkeypatch.setattr(requests, "get", fake_get)
+    monkeypatch.setattr(api_module.http_session, "get", fake_get)
 
     resp = client.get("/latest-trade/AMZN", headers={"X-ACCESS-KEY": ACCESS_KEY})
 
@@ -98,10 +98,10 @@ def test_market_status(monkeypatch):
         "next_close": "2025-07-09T16:00:00-04:00"
     }
 
-    def fake_get(url, headers):
+    def fake_get(url, headers, timeout=None):
         return DummyResponse(sample_status_payload, 200)
 
-    monkeypatch.setattr(requests, "get", fake_get)
+    monkeypatch.setattr(api_module.http_session, "get", fake_get)
 
     resp = client.get("/market-status", headers={"X-ACCESS-KEY": ACCESS_KEY})
 
