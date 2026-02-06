@@ -1,0 +1,52 @@
+spring:
+  docker:
+    compose:
+      enabled: false
+  datasource:
+    url: jdbc:postgresql://${RDS_HOSTNAME}:${RDS_PORT:5432}/${RDS_DB_NAME}
+    username: ${RDS_USERNAME}
+    password: ${RDS_PASSWORD}
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+logging:
+  level:
+    root: WARN
+    org.springframework.security: WARN
+    org.bhargavguntupalli: INFO
+
+admin:
+  username: ${ADMIN_USERNAME}
+  password: ${ADMIN_PASSWORD}
+  first-name: ${ADMIN_FIRST_NAME}
+  last-name: ${ADMIN_LAST_NAME}
+  email: ${ADMIN_EMAIL}
+
+fastapi:
+  base-url: ${FASTAPI_BASE_URL}
+  access-key: ${FASTAPI_ACCESS_KEY}
+
+jwt:
+  secret: ${JWT_SECRET}
+  expiration-ms: ${JWT_EXPIRATION_MS:3600000}
+
+rate-limit:
+  max-requests: 100
+  window-ms: 60000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
