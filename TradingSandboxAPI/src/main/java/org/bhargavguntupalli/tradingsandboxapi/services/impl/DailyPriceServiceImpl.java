@@ -1,6 +1,7 @@
 package org.bhargavguntupalli.tradingsandboxapi.services.impl;
 
 import org.bhargavguntupalli.tradingsandboxapi.dto.*;
+import org.springframework.web.client.HttpClientErrorException;
 import org.bhargavguntupalli.tradingsandboxapi.models.DailyPrice;
 import org.bhargavguntupalli.tradingsandboxapi.models.DailyPriceId;
 import org.bhargavguntupalli.tradingsandboxapi.repositories.DailyPriceRepository;
@@ -257,7 +258,7 @@ public class DailyPriceServiceImpl implements DailyPriceService {
 
         // Choose date format based on period
         DateTimeFormatter formatter;
-        if (period == TimePeriod.ONE_DAY || period == TimePeriod.ONE_WEEK) {
+        if (period == TimePeriod.ONE_DAY) {
             formatter = DateTimeFormatter.ofPattern("h:mm a");
         } else {
             formatter = DateTimeFormatter.ofPattern("M/d");
@@ -272,5 +273,49 @@ public class DailyPriceServiceImpl implements DailyPriceService {
                 ))
                 .sorted(Comparator.comparing(PriceDataDto::getTimestamp))
                 .toList();
+    }
+
+    @Override
+    public StockSearchResultDto searchStocks(String query, int limit) {
+        if (query == null || query.trim().isEmpty()) {
+            return new StockSearchResultDto(Collections.emptyList());
+        }
+
+        String url = String.format("%s/search/%s?limit=%d", fastApiBaseUrl, query.trim(), limit);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-ACCESS-KEY", fastApiAccessKey);
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        try {
+            ResponseEntity<StockSearchResultDto> resp = rest.exchange(
+                    url, HttpMethod.GET, entity, StockSearchResultDto.class);
+            return resp.getBody() != null ? resp.getBody() : new StockSearchResultDto(Collections.emptyList());
+        } catch (Exception e) {
+            return new StockSearchResultDto(Collections.emptyList());
+        }
+    }
+
+    @Override
+    public StockValidationDto validateSymbol(String symbol) {
+        if (symbol == null || symbol.trim().isEmpty()) {
+            return StockValidationDto.invalid("Symbol cannot be empty");
+        }
+
+        String url = String.format("%s/validate/%s", fastApiBaseUrl, symbol.trim().toUpperCase());
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-ACCESS-KEY", fastApiAccessKey);
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        try {
+            ResponseEntity<StockValidationDto> resp = rest.exchange(
+                    url, HttpMethod.GET, entity, StockValidationDto.class);
+            return resp.getBody() != null ? resp.getBody() : StockValidationDto.invalid("Failed to validate symbol");
+        } catch (HttpClientErrorException.NotFound e) {
+            return StockValidationDto.invalid("Stock symbol '" + symbol.toUpperCase() + "' not found");
+        } catch (Exception e) {
+            return StockValidationDto.invalid("Failed to validate symbol. Please try again.");
+        }
     }
 }

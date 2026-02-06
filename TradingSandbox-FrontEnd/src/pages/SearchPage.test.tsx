@@ -18,12 +18,16 @@ vi.mock('recharts', () => ({
 vi.mock('../services/api', () => ({
     fetchWithJwt: vi.fn(),
     fetchPricesByPeriod: vi.fn(),
+    searchStocks: vi.fn(),
+    validateStock: vi.fn(),
 }));
 
-import { fetchWithJwt, fetchPricesByPeriod } from '../services/api';
+import { fetchWithJwt, fetchPricesByPeriod, searchStocks, validateStock } from '../services/api';
 
 const mockFetchWithJwt = vi.mocked(fetchWithJwt);
 const mockFetchPricesByPeriod = vi.mocked(fetchPricesByPeriod);
+const mockSearchStocks = vi.mocked(searchStocks);
+const mockValidateStock = vi.mocked(validateStock);
 
 const mockPriceData = [
     { symbol: 'AAPL', timestamp: '2025-07-08T14:00:00Z', dateLabel: '7/8', closingPrice: 148 },
@@ -34,6 +38,16 @@ const mockPriceData = [
 describe('SearchPage', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        // Default mock for validateStock - returns valid for most tests
+        mockValidateStock.mockResolvedValue({
+            valid: true,
+            symbol: 'AAPL',
+            name: 'Apple Inc.',
+            exchange: 'NASDAQ',
+            tradable: true,
+        });
+        // Default mock for searchStocks - returns empty
+        mockSearchStocks.mockResolvedValue([]);
     });
 
     it('renders search heading', () => {
@@ -43,7 +57,7 @@ describe('SearchPage', () => {
 
     it('renders search input and button', () => {
         render(<SearchPage />);
-        expect(screen.getByPlaceholderText(/e\.g\. NVDA/i)).toBeInTheDocument();
+        expect(screen.getByPlaceholderText(/nvda/i)).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /search/i })).toBeInTheDocument();
     });
 
@@ -58,7 +72,7 @@ describe('SearchPage', () => {
     it('converts input to uppercase', async () => {
         render(<SearchPage />);
 
-        const input = screen.getByPlaceholderText(/e\.g\. NVDA/i);
+        const input = screen.getByPlaceholderText(/nvda/i);
         await userEvent.type(input, 'aapl');
 
         expect(input).toHaveValue('AAPL');
@@ -70,11 +84,11 @@ describe('SearchPage', () => {
 
         render(<SearchPage />);
 
-        await userEvent.type(screen.getByPlaceholderText(/e\.g\. NVDA/i), 'AAPL');
+        await userEvent.type(screen.getByPlaceholderText(/nvda/i), 'AAPL');
         await userEvent.click(screen.getByRole('button', { name: /search/i }));
 
         await waitFor(() => {
-            expect(mockFetchPricesByPeriod).toHaveBeenCalledWith('AAPL', '1M');
+            expect(mockFetchPricesByPeriod).toHaveBeenCalledWith('AAPL', '1D');
         });
     });
 
@@ -84,20 +98,25 @@ describe('SearchPage', () => {
 
         render(<SearchPage />);
 
-        await userEvent.type(screen.getByPlaceholderText(/e\.g\. NVDA/i), 'AAPL');
+        await userEvent.type(screen.getByPlaceholderText(/nvda/i), 'AAPL');
         await userEvent.click(screen.getByRole('button', { name: /search/i }));
 
         await waitFor(() => {
-            expect(screen.getByText('AAPL:')).toBeInTheDocument();
+            expect(screen.getByText(/AAPL/)).toBeInTheDocument();
         });
     });
 
     it('shows error when no price data found', async () => {
+        mockValidateStock.mockResolvedValue({
+            valid: true,
+            symbol: 'XXXX',
+            name: 'Test Stock',
+        });
         mockFetchPricesByPeriod.mockResolvedValue([]);
 
         render(<SearchPage />);
 
-        await userEvent.type(screen.getByPlaceholderText(/e\.g\. NVDA/i), 'XXXX');
+        await userEvent.type(screen.getByPlaceholderText(/nvda/i), 'XXXX');
         await userEvent.click(screen.getByRole('button', { name: /search/i }));
 
         await waitFor(() => {
@@ -110,7 +129,7 @@ describe('SearchPage', () => {
 
         render(<SearchPage />);
 
-        await userEvent.type(screen.getByPlaceholderText(/e\.g\. NVDA/i), 'AAPL');
+        await userEvent.type(screen.getByPlaceholderText(/nvda/i), 'AAPL');
         await userEvent.click(screen.getByRole('button', { name: /search/i }));
 
         await waitFor(() => {
@@ -124,11 +143,11 @@ describe('SearchPage', () => {
 
         render(<SearchPage />);
 
-        const input = screen.getByPlaceholderText(/e\.g\. NVDA/i);
+        const input = screen.getByPlaceholderText(/nvda/i);
         await userEvent.type(input, 'AAPL{Enter}');
 
         await waitFor(() => {
-            expect(mockFetchPricesByPeriod).toHaveBeenCalledWith('AAPL', '1M');
+            expect(mockFetchPricesByPeriod).toHaveBeenCalledWith('AAPL', '1D');
         });
     });
 
@@ -138,7 +157,7 @@ describe('SearchPage', () => {
 
         render(<SearchPage />);
 
-        await userEvent.type(screen.getByPlaceholderText(/e\.g\. NVDA/i), 'AAPL');
+        await userEvent.type(screen.getByPlaceholderText(/nvda/i), 'AAPL');
         await userEvent.click(screen.getByRole('button', { name: /search/i }));
 
         await waitFor(() => {
@@ -155,7 +174,7 @@ describe('SearchPage', () => {
 
         render(<SearchPage />);
 
-        await userEvent.type(screen.getByPlaceholderText(/e\.g\. NVDA/i), 'AAPL');
+        await userEvent.type(screen.getByPlaceholderText(/nvda/i), 'AAPL');
         await userEvent.click(screen.getByRole('button', { name: /search/i }));
 
         await waitFor(() => {
@@ -164,17 +183,17 @@ describe('SearchPage', () => {
         });
     });
 
-    it('disables search button during loading', async () => {
-        // Create a promise that never resolves to keep loading state
-        mockFetchPricesByPeriod.mockReturnValue(new Promise(() => {}));
+    it('disables search button during validation', async () => {
+        // Create a promise that never resolves to keep validating state
+        mockValidateStock.mockReturnValue(new Promise(() => {}));
 
         render(<SearchPage />);
 
-        await userEvent.type(screen.getByPlaceholderText(/e\.g\. NVDA/i), 'AAPL');
+        await userEvent.type(screen.getByPlaceholderText(/nvda/i), 'AAPL');
         await userEvent.click(screen.getByRole('button', { name: /search/i }));
 
         await waitFor(() => {
-            expect(screen.getByText(/searching/i)).toBeInTheDocument();
+            expect(screen.getByText(/validating/i)).toBeInTheDocument();
         });
     });
 

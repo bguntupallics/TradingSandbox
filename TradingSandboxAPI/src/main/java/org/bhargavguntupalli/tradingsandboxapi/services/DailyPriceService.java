@@ -3,6 +3,8 @@ package org.bhargavguntupalli.tradingsandboxapi.services;
 import org.bhargavguntupalli.tradingsandboxapi.dto.DailyPriceDto;
 import org.bhargavguntupalli.tradingsandboxapi.dto.MarketStatusDto;
 import org.bhargavguntupalli.tradingsandboxapi.dto.PriceDataDto;
+import org.bhargavguntupalli.tradingsandboxapi.dto.StockSearchResultDto;
+import org.bhargavguntupalli.tradingsandboxapi.dto.StockValidationDto;
 import org.bhargavguntupalli.tradingsandboxapi.dto.TimePeriod;
 import org.bhargavguntupalli.tradingsandboxapi.dto.TradeResponseDto;
 
@@ -17,4 +19,6 @@ public interface DailyPriceService {
     TradeResponseDto getLatestTrade(String symbol);
     MarketStatusDto fetchMarketStatus();
     List<PriceDataDto> findByPeriod(String symbol, TimePeriod period);
+    StockSearchResultDto searchStocks(String query, int limit);
+    StockValidationDto validateSymbol(String symbol);
 }

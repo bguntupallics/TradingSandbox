@@ -101,10 +101,12 @@ test-api: ## Run API tests
 	fi
 	@echo "$(GREEN)[SUCCESS]$(NC) API tests complete"
 
-test-frontend: ## Run Frontend linter
+test-frontend: ## Run Frontend tests and linter
+	@echo "$(BLUE)[INFO]$(NC) Running Frontend tests..."
+	@cd $(FRONTEND_DIR) && npx vitest run
 	@echo "$(BLUE)[INFO]$(NC) Running Frontend linter..."
 	@cd $(FRONTEND_DIR) && npm run lint
-	@echo "$(GREEN)[SUCCESS]$(NC) Frontend lint complete"
+	@echo "$(GREEN)[SUCCESS]$(NC) Frontend tests and lint complete"
 
 test-data: ## Run DataAcquisition tests
 	@echo "$(BLUE)[INFO]$(NC) Running DataAcquisition tests..."

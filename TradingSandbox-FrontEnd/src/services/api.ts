@@ -45,9 +45,55 @@ export interface PriceData {
     closingPrice: number;
 }
 
+export interface StockSuggestion {
+    symbol: string;
+    name: string;
+    exchange: string;
+}
+
+export interface StockSearchResult {
+    suggestions: StockSuggestion[];
+}
+
+export interface StockValidation {
+    valid: boolean;
+    symbol?: string;
+    name?: string;
+    exchange?: string;
+    tradable?: boolean;
+    error?: string;
+}
+
 export async function fetchPricesByPeriod(
     symbol: string,
     period: TimePeriod
 ): Promise<PriceData[]> {
     return fetchWithJwt<PriceData[]>(`/api/prices/${symbol}/period/${period}`);
+}
+
+export async function searchStocks(
+    query: string,
+    limit: number = 10
+): Promise<StockSuggestion[]> {
+    if (!query || query.trim().length < 1) {
+        return [];
+    }
+    const result = await fetchWithJwt<StockSearchResult>(
+        `/api/prices/search/${encodeURIComponent(query.trim())}?limit=${limit}`
+    );
+    return result.suggestions || [];
+}
+
+export async function validateStock(symbol: string): Promise<StockValidation> {
+    try {
+        return await fetchWithJwt<StockValidation>(
+            `/api/prices/validate/${encodeURIComponent(symbol.trim().toUpperCase())}`
+        );
+    } catch (err) {
+        const message = (err as Error).message;
+        return {
+            valid: false,
+            error: message || `Stock symbol '${symbol}' not found`,
+        };
+    }
 }

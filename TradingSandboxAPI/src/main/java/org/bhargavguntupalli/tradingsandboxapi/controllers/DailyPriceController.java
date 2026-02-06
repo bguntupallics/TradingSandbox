@@ -3,6 +3,8 @@ package org.bhargavguntupalli.tradingsandboxapi.controllers;
 import org.bhargavguntupalli.tradingsandboxapi.dto.DailyPriceDto;
 import org.bhargavguntupalli.tradingsandboxapi.dto.MarketStatusDto;
 import org.bhargavguntupalli.tradingsandboxapi.dto.PriceDataDto;
+import org.bhargavguntupalli.tradingsandboxapi.dto.StockSearchResultDto;
+import org.bhargavguntupalli.tradingsandboxapi.dto.StockValidationDto;
 import org.bhargavguntupalli.tradingsandboxapi.dto.TimePeriod;
 import org.bhargavguntupalli.tradingsandboxapi.dto.TradeResponseDto;
 import org.bhargavguntupalli.tradingsandboxapi.services.DailyPriceService;
@@ -73,5 +75,22 @@ public class DailyPriceController {
             return ResponseEntity.badRequest().build();
         }
         return ResponseEntity.ok(svc.findByPeriod(symbol, timePeriod));
+    }
+
+    @GetMapping("/search/{query}")
+    public ResponseEntity<StockSearchResultDto> searchStocks(
+            @PathVariable String query,
+            @RequestParam(defaultValue = "10") int limit
+    ) {
+        return ResponseEntity.ok(svc.searchStocks(query, limit));
+    }
+
+    @GetMapping("/validate/{symbol}")
+    public ResponseEntity<StockValidationDto> validateSymbol(@PathVariable String symbol) {
+        StockValidationDto result = svc.validateSymbol(symbol);
+        if (!result.isValid()) {
+            return ResponseEntity.status(404).body(result);
+        }
+        return ResponseEntity.ok(result);
     }
 }

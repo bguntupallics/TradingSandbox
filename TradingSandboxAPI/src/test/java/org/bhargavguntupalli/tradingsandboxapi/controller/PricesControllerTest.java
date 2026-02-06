@@ -204,4 +204,81 @@ class PricesControllerTest {
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest());
     }
+
+    // ── searchStocks ────────────────────────────────────────────────────────
+
+    @Test
+    void searchStocks_Returns200WithResults() throws Exception {
+        StockSearchResultDto result = new StockSearchResultDto(List.of(
+                new StockSuggestionDto("AAPL", "Apple Inc.", "NASDAQ"),
+                new StockSuggestionDto("AMZN", "Amazon.com Inc.", "NASDAQ")
+        ));
+
+        when(svc.searchStocks(eq("AA"), eq(10))).thenReturn(result);
+
+        mockMvc.perform(get("/api/prices/search/AA")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.suggestions.length()").value(2))
+                .andExpect(jsonPath("$.suggestions[0].symbol").value("AAPL"))
+                .andExpect(jsonPath("$.suggestions[0].name").value("Apple Inc."))
+                .andExpect(jsonPath("$.suggestions[0].exchange").value("NASDAQ"));
+    }
+
+    @Test
+    void searchStocks_WithLimit_Returns200() throws Exception {
+        StockSearchResultDto result = new StockSearchResultDto(List.of(
+                new StockSuggestionDto("AAPL", "Apple Inc.", "NASDAQ")
+        ));
+
+        when(svc.searchStocks(eq("A"), eq(5))).thenReturn(result);
+
+        mockMvc.perform(get("/api/prices/search/A?limit=5")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.suggestions.length()").value(1));
+    }
+
+    @Test
+    void searchStocks_EmptyResults_Returns200WithEmptyList() throws Exception {
+        StockSearchResultDto result = new StockSearchResultDto(List.of());
+
+        when(svc.searchStocks(eq("XYZ123"), eq(10))).thenReturn(result);
+
+        mockMvc.perform(get("/api/prices/search/XYZ123")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.suggestions").isEmpty());
+    }
+
+    // ── validateSymbol ──────────────────────────────────────────────────────
+
+    @Test
+    void validateSymbol_Valid_Returns200() throws Exception {
+        StockValidationDto validation = StockValidationDto.valid("AAPL", "Apple Inc.", "NASDAQ");
+
+        when(svc.validateSymbol("AAPL")).thenReturn(validation);
+
+        mockMvc.perform(get("/api/prices/validate/AAPL")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.valid").value(true))
+                .andExpect(jsonPath("$.symbol").value("AAPL"))
+                .andExpect(jsonPath("$.name").value("Apple Inc."))
+                .andExpect(jsonPath("$.exchange").value("NASDAQ"))
+                .andExpect(jsonPath("$.tradable").value(true));
+    }
+
+    @Test
+    void validateSymbol_Invalid_Returns404() throws Exception {
+        StockValidationDto validation = StockValidationDto.invalid("Stock symbol 'FAKE' not found");
+
+        when(svc.validateSymbol("FAKE")).thenReturn(validation);
+
+        mockMvc.perform(get("/api/prices/validate/FAKE")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.valid").value(false))
+                .andExpect(jsonPath("$.error").value("Stock symbol 'FAKE' not found"));
+    }
 }

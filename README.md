@@ -31,7 +31,7 @@ You can use either the `builder` script or `make` commands - they both use the s
 # Run tests
 ./builder test             # All tests
 ./builder test-api         # API tests only
-./builder test-frontend    # Frontend linting
+./builder test-frontend    # Frontend tests + linting
 ./builder test-data        # Python tests
 
 # Clean build artifacts

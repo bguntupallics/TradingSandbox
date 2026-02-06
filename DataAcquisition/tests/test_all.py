@@ -27,6 +27,8 @@ from src.api import (
     MarketCapResponse,
     MarketStatus,
     SimplifiedTrade,
+    StockSuggestion,
+    StockSearchResult,
     app,
 )
 
@@ -852,3 +854,330 @@ class TestMarketStatusModel:
         assert "next_open" in dumped
         assert "next_close" in dumped
         assert dumped["is_open"] is False
+
+
+# ===========================================================================
+# 12. Stock search endpoint
+# ===========================================================================
+
+SAMPLE_ASSETS_RESPONSE = [
+    {
+        "id": "asset-id-1",
+        "class": "us_equity",
+        "exchange": "NASDAQ",
+        "symbol": "AAPL",
+        "name": "Apple Inc.",
+        "status": "active",
+        "tradable": True,
+        "marginable": True,
+        "shortable": True,
+        "easy_to_borrow": True,
+        "fractionable": True,
+    },
+    {
+        "id": "asset-id-2",
+        "class": "us_equity",
+        "exchange": "NASDAQ",
+        "symbol": "AMZN",
+        "name": "Amazon.com Inc.",
+        "status": "active",
+        "tradable": True,
+        "marginable": True,
+        "shortable": True,
+        "easy_to_borrow": True,
+        "fractionable": True,
+    },
+    {
+        "id": "asset-id-3",
+        "class": "us_equity",
+        "exchange": "NYSE",
+        "symbol": "AMD",
+        "name": "Advanced Micro Devices, Inc.",
+        "status": "active",
+        "tradable": True,
+        "marginable": True,
+        "shortable": True,
+        "easy_to_borrow": True,
+        "fractionable": True,
+    },
+    {
+        "id": "asset-id-4",
+        "class": "us_equity",
+        "exchange": "NASDAQ",
+        "symbol": "GOOGL",
+        "name": "Alphabet Inc. Class A",
+        "status": "active",
+        "tradable": False,  # Not tradable
+        "marginable": True,
+        "shortable": True,
+        "easy_to_borrow": True,
+        "fractionable": True,
+    },
+]
+
+
+class TestSearchStocks:
+    """Tests for GET /search/{query}."""
+
+    def test_search_returns_matches(self, monkeypatch):
+        monkeypatch.setattr(
+            api_module.http_session, "get",
+            lambda url, headers, params=None, timeout=None: DummyResponse(SAMPLE_ASSETS_RESPONSE, 200),
+        )
+        resp = client.get("/search/A", headers=AUTH_HEADER)
+        assert resp.status_code == 200
+        body = resp.json()
+        assert "suggestions" in body
+        # Should match AAPL, AMZN, AMD but not GOOGL (not tradable)
+        symbols = [s["symbol"] for s in body["suggestions"]]
+        assert "AAPL" in symbols
+        assert "AMZN" in symbols
+        assert "AMD" in symbols
+        assert "GOOGL" not in symbols  # Not tradable
+
+    def test_search_exact_match_first(self, monkeypatch):
+        """Exact symbol matches should appear first."""
+        monkeypatch.setattr(
+            api_module.http_session, "get",
+            lambda url, headers, params=None, timeout=None: DummyResponse(SAMPLE_ASSETS_RESPONSE, 200),
+        )
+        resp = client.get("/search/AMD", headers=AUTH_HEADER)
+        assert resp.status_code == 200
+        body = resp.json()
+        # AMD should be first as it's an exact match
+        if body["suggestions"]:
+            assert body["suggestions"][0]["symbol"] == "AMD"
+
+    def test_search_respects_limit(self, monkeypatch):
+        monkeypatch.setattr(
+            api_module.http_session, "get",
+            lambda url, headers, params=None, timeout=None: DummyResponse(SAMPLE_ASSETS_RESPONSE, 200),
+        )
+        resp = client.get("/search/A?limit=2", headers=AUTH_HEADER)
+        assert resp.status_code == 200
+        body = resp.json()
+        assert len(body["suggestions"]) <= 2
+
+    def test_search_single_char(self, monkeypatch):
+        """Single character queries should return matching results."""
+        monkeypatch.setattr(
+            api_module.http_session, "get",
+            lambda url, headers, params=None, timeout=None: DummyResponse(SAMPLE_ASSETS_RESPONSE, 200),
+        )
+        resp = client.get("/search/A", headers=AUTH_HEADER)
+        assert resp.status_code == 200
+        body = resp.json()
+        # Should match assets starting with A
+        assert len(body["suggestions"]) > 0
+
+    def test_search_no_matches(self, monkeypatch):
+        monkeypatch.setattr(
+            api_module.http_session, "get",
+            lambda url, headers, params=None, timeout=None: DummyResponse([], 200),
+        )
+        resp = client.get("/search/XYZ123", headers=AUTH_HEADER)
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["suggestions"] == []
+
+    def test_search_api_failure(self, monkeypatch):
+        monkeypatch.setattr(
+            api_module.http_session, "get",
+            lambda url, headers, params=None, timeout=None: DummyResponse({}, 500),
+        )
+        resp = client.get("/search/AAPL", headers=AUTH_HEADER)
+        assert resp.status_code == 500
+        assert "Failed to fetch" in resp.json()["detail"]
+
+    def test_search_request_exception_returns_503(self, monkeypatch):
+        def exploding_get(url, headers, params=None, timeout=None):
+            raise requests.exceptions.ConnectionError("Connection failed")
+
+        monkeypatch.setattr(api_module.http_session, "get", exploding_get)
+        resp = client.get("/search/AAPL", headers=AUTH_HEADER)
+        assert resp.status_code == 503
+        assert resp.json()["detail"] == "Alpaca API temporarily unavailable"
+
+    def test_search_requires_auth(self):
+        resp = client.get("/search/AAPL")
+        assert resp.status_code == 403
+
+    def test_search_suggestion_structure(self, monkeypatch):
+        monkeypatch.setattr(
+            api_module.http_session, "get",
+            lambda url, headers, params=None, timeout=None: DummyResponse(SAMPLE_ASSETS_RESPONSE, 200),
+        )
+        resp = client.get("/search/AAPL", headers=AUTH_HEADER)
+        body = resp.json()
+        if body["suggestions"]:
+            suggestion = body["suggestions"][0]
+            assert "symbol" in suggestion
+            assert "name" in suggestion
+            assert "exchange" in suggestion
+
+
+# ===========================================================================
+# 13. Stock validation endpoint
+# ===========================================================================
+
+SAMPLE_VALID_ASSET = {
+    "id": "asset-id-1",
+    "class": "us_equity",
+    "exchange": "NASDAQ",
+    "symbol": "AAPL",
+    "name": "Apple Inc.",
+    "status": "active",
+    "tradable": True,
+    "marginable": True,
+    "shortable": True,
+    "easy_to_borrow": True,
+    "fractionable": True,
+}
+
+SAMPLE_NONTRADABLE_ASSET = {
+    "id": "asset-id-2",
+    "class": "us_equity",
+    "exchange": "OTC",
+    "symbol": "FAKE",
+    "name": "Fake Corp",
+    "status": "active",
+    "tradable": False,
+    "marginable": False,
+    "shortable": False,
+    "easy_to_borrow": False,
+    "fractionable": False,
+}
+
+
+class TestValidateSymbol:
+    """Tests for GET /validate/{symbol}."""
+
+    def test_validate_success(self, monkeypatch):
+        monkeypatch.setattr(
+            api_module.http_session, "get",
+            lambda url, headers, timeout=None: DummyResponse(SAMPLE_VALID_ASSET, 200),
+        )
+        resp = client.get("/validate/AAPL", headers=AUTH_HEADER)
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["valid"] is True
+        assert body["symbol"] == "AAPL"
+        assert body["name"] == "Apple Inc."
+        assert body["exchange"] == "NASDAQ"
+        assert body["tradable"] is True
+
+    def test_validate_lowercase_converted(self, monkeypatch):
+        """Symbol should be uppercased."""
+        monkeypatch.setattr(
+            api_module.http_session, "get",
+            lambda url, headers, timeout=None: DummyResponse(SAMPLE_VALID_ASSET, 200),
+        )
+        resp = client.get("/validate/aapl", headers=AUTH_HEADER)
+        assert resp.status_code == 200
+        assert resp.json()["symbol"] == "AAPL"
+
+    def test_validate_not_found(self, monkeypatch):
+        monkeypatch.setattr(
+            api_module.http_session, "get",
+            lambda url, headers, timeout=None: DummyResponse({"message": "asset not found"}, 404),
+        )
+        resp = client.get("/validate/NOTREAL", headers=AUTH_HEADER)
+        assert resp.status_code == 404
+        body = resp.json()
+        assert "not found" in body["detail"].lower()
+
+    def test_validate_not_tradable(self, monkeypatch):
+        """Asset exists but is not tradable."""
+        monkeypatch.setattr(
+            api_module.http_session, "get",
+            lambda url, headers, timeout=None: DummyResponse(SAMPLE_NONTRADABLE_ASSET, 200),
+        )
+        resp = client.get("/validate/FAKE", headers=AUTH_HEADER)
+        assert resp.status_code == 404
+        body = resp.json()
+        assert "not currently tradable" in body["detail"]
+
+    def test_validate_api_failure(self, monkeypatch):
+        monkeypatch.setattr(
+            api_module.http_session, "get",
+            lambda url, headers, timeout=None: DummyResponse({}, 500),
+        )
+        resp = client.get("/validate/AAPL", headers=AUTH_HEADER)
+        assert resp.status_code == 500
+        assert "Failed to validate" in resp.json()["detail"]
+
+    def test_validate_request_exception_returns_503(self, monkeypatch):
+        def exploding_get(url, headers, timeout=None):
+            raise requests.exceptions.Timeout("Request timed out")
+
+        monkeypatch.setattr(api_module.http_session, "get", exploding_get)
+        resp = client.get("/validate/AAPL", headers=AUTH_HEADER)
+        assert resp.status_code == 503
+        assert resp.json()["detail"] == "Alpaca API temporarily unavailable"
+
+    def test_validate_requires_auth(self):
+        resp = client.get("/validate/AAPL")
+        assert resp.status_code == 403
+
+
+# ===========================================================================
+# 14. Pydantic model validation -- StockSuggestion and StockSearchResult
+# ===========================================================================
+
+class TestStockSuggestionModel:
+    def test_create_stock_suggestion(self):
+        ss = StockSuggestion(
+            symbol="AAPL",
+            name="Apple Inc.",
+            exchange="NASDAQ",
+        )
+        assert ss.symbol == "AAPL"
+        assert ss.name == "Apple Inc."
+        assert ss.exchange == "NASDAQ"
+
+    def test_missing_symbol_raises(self):
+        with pytest.raises(ValidationError):
+            StockSuggestion(name="Test", exchange="NYSE")
+
+    def test_missing_name_raises(self):
+        with pytest.raises(ValidationError):
+            StockSuggestion(symbol="TEST", exchange="NYSE")
+
+    def test_missing_exchange_raises(self):
+        with pytest.raises(ValidationError):
+            StockSuggestion(symbol="TEST", name="Test Corp")
+
+    def test_serialization(self):
+        ss = StockSuggestion(symbol="MSFT", name="Microsoft", exchange="NASDAQ")
+        dumped = ss.model_dump()
+        assert dumped == {"symbol": "MSFT", "name": "Microsoft", "exchange": "NASDAQ"}
+
+
+class TestStockSearchResultModel:
+    def test_create_with_suggestions(self):
+        ssr = StockSearchResult(
+            suggestions=[
+                StockSuggestion(symbol="AAPL", name="Apple", exchange="NASDAQ"),
+                StockSuggestion(symbol="AMZN", name="Amazon", exchange="NASDAQ"),
+            ]
+        )
+        assert len(ssr.suggestions) == 2
+        assert ssr.suggestions[0].symbol == "AAPL"
+
+    def test_create_empty(self):
+        ssr = StockSearchResult(suggestions=[])
+        assert ssr.suggestions == []
+
+    def test_missing_suggestions_raises(self):
+        with pytest.raises(ValidationError):
+            StockSearchResult()
+
+    def test_serialization(self):
+        ssr = StockSearchResult(
+            suggestions=[
+                StockSuggestion(symbol="TSLA", name="Tesla", exchange="NASDAQ"),
+            ]
+        )
+        dumped = ssr.model_dump()
+        assert "suggestions" in dumped
+        assert len(dumped["suggestions"]) == 1

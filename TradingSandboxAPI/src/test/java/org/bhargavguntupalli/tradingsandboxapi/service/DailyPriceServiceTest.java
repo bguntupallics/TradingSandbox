@@ -3,6 +3,9 @@ package org.bhargavguntupalli.tradingsandboxapi.service;
 import org.bhargavguntupalli.tradingsandboxapi.dto.BarDataDto;
 import org.bhargavguntupalli.tradingsandboxapi.dto.BarDto;
 import org.bhargavguntupalli.tradingsandboxapi.dto.DailyPriceDto;
+import org.bhargavguntupalli.tradingsandboxapi.dto.StockSearchResultDto;
+import org.bhargavguntupalli.tradingsandboxapi.dto.StockSuggestionDto;
+import org.bhargavguntupalli.tradingsandboxapi.dto.StockValidationDto;
 import org.bhargavguntupalli.tradingsandboxapi.models.DailyPrice;
 import org.bhargavguntupalli.tradingsandboxapi.models.DailyPriceId;
 import org.bhargavguntupalli.tradingsandboxapi.repositories.DailyPriceRepository;
@@ -100,5 +103,129 @@ class DailyPriceServiceTest {
         DailyPrice saved = captor.getValue();
         assertThat(saved.getId()).isEqualTo(id);
         assertThat(saved.getClosingPrice()).isEqualByComparingTo(BigDecimal.valueOf(200.5));
+    }
+
+    // ── searchStocks tests ─────────────────────────────────────────────────
+
+    @Test
+    void searchStocks_WhenEmptyQuery_ReturnsEmptyResult() {
+        StockSearchResultDto result = svc.searchStocks("", 10);
+
+        assertThat(result.getSuggestions()).isEmpty();
+        verifyNoInteractions(rest);
+    }
+
+    @Test
+    void searchStocks_WhenNullQuery_ReturnsEmptyResult() {
+        StockSearchResultDto result = svc.searchStocks(null, 10);
+
+        assertThat(result.getSuggestions()).isEmpty();
+        verifyNoInteractions(rest);
+    }
+
+    @Test
+    void searchStocks_WhenApiReturnsResults_ReturnsSearchResult() {
+        List<StockSuggestionDto> suggestions = List.of(
+                new StockSuggestionDto("AAPL", "Apple Inc.", "NASDAQ"),
+                new StockSuggestionDto("AMZN", "Amazon.com Inc.", "NASDAQ")
+        );
+        StockSearchResultDto apiResponse = new StockSearchResultDto(suggestions);
+
+        ResponseEntity<StockSearchResultDto> resp = new ResponseEntity<>(apiResponse, HttpStatus.OK);
+        when(rest.exchange(
+                eq("http://fake-api/search/AA?limit=10"),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                eq(StockSearchResultDto.class)
+        )).thenReturn(resp);
+
+        StockSearchResultDto result = svc.searchStocks("AA", 10);
+
+        assertThat(result.getSuggestions()).hasSize(2);
+        assertThat(result.getSuggestions().get(0).getSymbol()).isEqualTo("AAPL");
+    }
+
+    @Test
+    void searchStocks_WhenApiFails_ReturnsEmptyResult() {
+        when(rest.exchange(
+                anyString(),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                eq(StockSearchResultDto.class)
+        )).thenThrow(new RuntimeException("API error"));
+
+        StockSearchResultDto result = svc.searchStocks("AA", 10);
+
+        assertThat(result.getSuggestions()).isEmpty();
+    }
+
+    // ── validateSymbol tests ───────────────────────────────────────────────
+
+    @Test
+    void validateSymbol_WhenEmptySymbol_ReturnsInvalid() {
+        StockValidationDto result = svc.validateSymbol("");
+
+        assertThat(result.isValid()).isFalse();
+        assertThat(result.getError()).isEqualTo("Symbol cannot be empty");
+        verifyNoInteractions(rest);
+    }
+
+    @Test
+    void validateSymbol_WhenNullSymbol_ReturnsInvalid() {
+        StockValidationDto result = svc.validateSymbol(null);
+
+        assertThat(result.isValid()).isFalse();
+        assertThat(result.getError()).isEqualTo("Symbol cannot be empty");
+        verifyNoInteractions(rest);
+    }
+
+    @Test
+    void validateSymbol_WhenApiReturnsValid_ReturnsValidResult() {
+        StockValidationDto apiResponse = StockValidationDto.valid("AAPL", "Apple Inc.", "NASDAQ");
+
+        ResponseEntity<StockValidationDto> resp = new ResponseEntity<>(apiResponse, HttpStatus.OK);
+        when(rest.exchange(
+                eq("http://fake-api/validate/AAPL"),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                eq(StockValidationDto.class)
+        )).thenReturn(resp);
+
+        StockValidationDto result = svc.validateSymbol("aapl");
+
+        assertThat(result.isValid()).isTrue();
+        assertThat(result.getSymbol()).isEqualTo("AAPL");
+        assertThat(result.getName()).isEqualTo("Apple Inc.");
+    }
+
+    @Test
+    void validateSymbol_WhenApiReturns404_ReturnsInvalid() {
+        when(rest.exchange(
+                anyString(),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                eq(StockValidationDto.class)
+        )).thenThrow(org.springframework.web.client.HttpClientErrorException.create(
+                HttpStatus.NOT_FOUND, "Not Found", HttpHeaders.EMPTY, new byte[0], null));
+
+        StockValidationDto result = svc.validateSymbol("INVALID");
+
+        assertThat(result.isValid()).isFalse();
+        assertThat(result.getError()).contains("INVALID");
+    }
+
+    @Test
+    void validateSymbol_WhenApiFails_ReturnsInvalid() {
+        when(rest.exchange(
+                anyString(),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                eq(StockValidationDto.class)
+        )).thenThrow(new RuntimeException("Connection error"));
+
+        StockValidationDto result = svc.validateSymbol("AAPL");
+
+        assertThat(result.isValid()).isFalse();
+        assertThat(result.getError()).contains("try again");
     }
 }

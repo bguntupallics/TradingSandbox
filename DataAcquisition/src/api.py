@@ -10,6 +10,7 @@ import yfinance as yf
 from alpaca.data.historical import StockHistoricalDataClient
 from alpaca.data.requests import StockBarsRequest
 from alpaca.data.timeframe import TimeFrame
+from alpaca.data.enums import DataFeed
 import os
 import logging
 from dotenv import load_dotenv
@@ -31,6 +32,12 @@ ACCESS_KEY_HASH = os.getenv("ACCESS_KEY_HASH")
 
 if not KEY or not SECRET or not ACCESS_KEY_HASH:
     raise RuntimeError("ALPACA_API_KEY, ALPACA_API_SECRET and ACCESS_KEY_HASH must be set in .env")
+
+# Paper trading keys start with "PK", live keys start with "AK"
+ALPACA_TRADING_BASE_URL = (
+    "https://paper-api.alpaca.markets" if KEY.startswith("PK")
+    else "https://api.alpaca.markets"
+)
 
 # ─── API-key security setup ──────────────────────────────────────────────────────
 API_KEY_NAME = "X-ACCESS-KEY"
@@ -128,6 +135,16 @@ class MarketStatus(BaseModel):
     next_close: datetime  # when the market will next close
 
 
+class StockSuggestion(BaseModel):
+    symbol: str
+    name: str
+    exchange: str
+
+
+class StockSearchResult(BaseModel):
+    suggestions: list[StockSuggestion]
+
+
 # ─── Endpoints ─────────────────────────────────────────────────────────────────
 @api_router.get("/")
 @limiter.limit("30/minute")
@@ -220,7 +237,8 @@ def get_stock_bars(
         timeframe=tf,
         multiplier=multiplier if timeframe in ["5Min", "15Min"] else None,
         start=start,
-        end=end
+        end=end,
+        feed=DataFeed.IEX
     )
 
     try:
@@ -266,7 +284,7 @@ def get_market_cap(symbol: str, request: Request):
 @limiter.limit("30/minute")
 def get_market_status(request: Request):
     """Return current market open status and upcoming open/close times."""
-    url = "https://api.alpaca.markets/v2/clock"
+    url = f"{ALPACA_TRADING_BASE_URL}/v2/clock"
     headers = {
         "accept":              "application/json",
         "APCA-API-KEY-ID":     KEY,
@@ -280,6 +298,132 @@ def get_market_status(request: Request):
         return resp.json()
     except requests.exceptions.RequestException as e:
         logger.exception("Error fetching market status: %s", str(e))
+        raise HTTPException(
+            status_code=503,
+            detail="Alpaca API temporarily unavailable"
+        )
+
+
+@api_router.get("/search/{query}", response_model=StockSearchResult)
+@limiter.limit("30/minute")
+def search_stocks(query: str, request: Request, limit: int = 10):
+    """Search for stocks by symbol or name.
+
+    Returns matching tradable US stocks from Alpaca's asset database.
+    """
+    if not query or len(query) < 1:
+        return {"suggestions": []}
+
+    query = query.upper().strip()
+
+    url = f"{ALPACA_TRADING_BASE_URL}/v2/assets"
+    headers = {
+        "accept": "application/json",
+        "APCA-API-KEY-ID": KEY,
+        "APCA-API-SECRET-KEY": SECRET,
+    }
+    params = {
+        "status": "active",
+        "asset_class": "us_equity",
+    }
+
+    try:
+        resp = http_session.get(url, headers=headers, params=params, timeout=10)
+        if resp.status_code != 200:
+            raise HTTPException(
+                status_code=resp.status_code,
+                detail="Failed to fetch assets from Alpaca"
+            )
+
+        assets = resp.json()
+
+        # Filter assets that match the query (symbol starts with or name contains)
+        suggestions = []
+        for asset in assets:
+            if not asset.get("tradable", False):
+                continue
+
+            symbol = asset.get("symbol", "")
+            name = asset.get("name", "")
+            exchange = asset.get("exchange", "")
+
+            # Match: symbol starts with query OR name contains query
+            if symbol.startswith(query) or query in name.upper():
+                suggestions.append({
+                    "symbol": symbol,
+                    "name": name,
+                    "exchange": exchange,
+                })
+
+            if len(suggestions) >= limit:
+                break
+
+        # Sort by best match (exact symbol match first, then by symbol length)
+        suggestions.sort(key=lambda x: (
+            0 if x["symbol"] == query else 1,  # Exact match first
+            0 if x["symbol"].startswith(query) else 1,  # Prefix match second
+            len(x["symbol"])  # Shorter symbols first
+        ))
+
+        return {"suggestions": suggestions[:limit]}
+
+    except requests.exceptions.RequestException as e:
+        logger.exception("Error searching stocks: %s", str(e))
+        raise HTTPException(
+            status_code=503,
+            detail="Alpaca API temporarily unavailable"
+        )
+
+
+@api_router.get("/validate/{symbol}")
+@limiter.limit("30/minute")
+def validate_symbol(symbol: str, request: Request):
+    """Validate if a stock symbol exists and is tradable.
+
+    Returns symbol info if valid, 404 if not found.
+    """
+    symbol = symbol.upper().strip()
+
+    url = f"{ALPACA_TRADING_BASE_URL}/v2/assets/{symbol}"
+    headers = {
+        "accept": "application/json",
+        "APCA-API-KEY-ID": KEY,
+        "APCA-API-SECRET-KEY": SECRET,
+    }
+
+    try:
+        resp = http_session.get(url, headers=headers, timeout=10)
+
+        if resp.status_code == 404:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Stock symbol '{symbol}' not found. Please check the ticker and try again."
+            )
+
+        if resp.status_code != 200:
+            raise HTTPException(
+                status_code=resp.status_code,
+                detail="Failed to validate symbol"
+            )
+
+        asset = resp.json()
+
+        if not asset.get("tradable", False):
+            raise HTTPException(
+                status_code=404,
+                detail=f"Stock '{symbol}' exists but is not currently tradable."
+            )
+
+        return {
+            "valid": True,
+            "symbol": asset.get("symbol"),
+            "name": asset.get("name"),
+            "exchange": asset.get("exchange"),
+            "tradable": asset.get("tradable"),
+        }
+
+    except requests.exceptions.RequestException as e:
+        logger.exception("Error validating symbol %s: %s", symbol, str(e))
         raise HTTPException(
             status_code=503,
             detail="Alpaca API temporarily unavailable"

@@ -356,3 +356,75 @@ select {
     opacity: 0.5;
     cursor: not-allowed;
 }
+
+/*--------------------------------------------------------------
+8. Stock Search Autocomplete
+--------------------------------------------------------------*/
+.stock-search-container {
+    position: relative;
+    margin: 1rem 0;
+}
+
+.suggestions-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: var(--bg-panel);
+    border: 1px solid var(--input-border);
+    border-radius: 0.5rem;
+    margin-top: 0.25rem;
+    padding: 0;
+    list-style: none;
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.suggestion-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    border-bottom: 1px solid var(--input-border);
+}
+
+.suggestion-item:last-child {
+    border-bottom: none;
+}
+
+.suggestion-item:hover,
+.suggestion-item.selected {
+    background-color: var(--button-hover);
+}
+
+.suggestion-symbol {
+    font-weight: 600;
+    color: var(--text-light);
+    min-width: 60px;
+}
+
+.suggestion-name {
+    flex: 1;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.suggestion-exchange {
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    opacity: 0.7;
+}
+
+/* Stock name in return panel */
+.stock-name {
+    font-weight: 400;
+    color: var(--text-secondary);
+    font-size: 0.9em;
+}

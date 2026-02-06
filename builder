@@ -278,11 +278,13 @@ test_api() {
 }
 
 test_frontend() {
-    log_info "Running Frontend linter..."
+    log_info "Running Frontend tests..."
     cd "$FRONTEND_DIR"
+    npx vitest run
+    log_info "Running Frontend linter..."
     npm run lint
     cd ..
-    log_success "Frontend lint complete"
+    log_success "Frontend tests and lint complete"
 }
 
 test_data() {
@@ -366,7 +368,7 @@ RUN COMMANDS:
 TEST COMMANDS:
   test               Run all tests
   test-api           Run API tests
-  test-frontend      Run Frontend lint
+  test-frontend      Run Frontend tests and lint
   test-data          Run DataAcquisition tests
 
 CLEAN COMMANDS:
