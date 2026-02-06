@@ -75,7 +75,7 @@ run-data: ## Run DataAcquisition service
 run-all: ## Run all services concurrently (use Ctrl+C to stop)
 	@echo "$(BLUE)[INFO]$(NC) Starting all services..."
 	@echo "$(YELLOW)[WARN]$(NC) Press Ctrl+C to stop all services"
-	@trap 'killall java node python 2>/dev/null; exit 0' INT; \
+	@trap 'jobs -p | xargs -r kill 2>/dev/null; sleep 1; jobs -p | xargs -r kill -9 2>/dev/null; exit 0' INT TERM; \
 		$(MAKE) run-api & \
 		$(MAKE) run-frontend & \
 		$(MAKE) run-data & \

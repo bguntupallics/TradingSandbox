@@ -253,12 +253,21 @@ run_all() {
     log_success "All services started successfully!"
     log_warn "Press Ctrl+C to stop all services"
 
-    # Cleanup function for trap
+    # Cleanup function for trap - kill all child processes
     cleanup() {
         log_info "Stopping all services..."
         for pid in "${PIDS[@]}"; do
-            kill "$pid" 2>/dev/null || true
+            kill -TERM "$pid" 2>/dev/null || true
+            # Also kill any children spawned by each process
+            pkill -TERM -P "$pid" 2>/dev/null || true
         done
+        sleep 1
+        # Force kill anything still running
+        for pid in "${PIDS[@]}"; do
+            kill -9 "$pid" 2>/dev/null || true
+            pkill -9 -P "$pid" 2>/dev/null || true
+        done
+        log_success "All services stopped"
         exit 0
     }
 
