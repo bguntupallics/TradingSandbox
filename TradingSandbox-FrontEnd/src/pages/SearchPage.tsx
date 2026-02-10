@@ -33,7 +33,7 @@ export default function SearchPage() {
     const [displayedSymbol, setDisplayedSymbol] = useState<string>('');
     const [stockName, setStockName] = useState<string>('');
     const [priceData, setPriceData] = useState<PriceData[]>([]);
-    const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('1D');
+    const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('1W');
     const [latestPrice, setLatestPrice] = useState<number | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
@@ -153,7 +153,7 @@ export default function SearchPage() {
             )}
 
             {/* Time period selector */}
-            {priceData.length > 0 && (
+            {displayedSymbol && (
                 <TimePeriodSelector
                     selectedPeriod={selectedPeriod}
                     onPeriodChange={handlePeriodChange}
@@ -162,6 +162,14 @@ export default function SearchPage() {
             )}
 
             {/* Chart for selected period */}
+            {displayedSymbol && priceData.length === 0 && !loading && error && (
+                <div className="price-panel chart-panel">
+                    <h2>{PERIOD_LABELS[selectedPeriod]}</h2>
+                    <p className="text-secondary" style={{ textAlign: 'center', padding: '4rem 0' }}>
+                        No data available for this period. Try a different time range.
+                    </p>
+                </div>
+            )}
             {priceData.length > 0 && (
                 <div className="price-panel chart-panel">
                     <h2>{PERIOD_LABELS[selectedPeriod]}</h2>

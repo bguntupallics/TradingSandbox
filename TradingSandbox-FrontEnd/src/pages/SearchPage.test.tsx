@@ -90,7 +90,7 @@ describe('SearchPage', () => {
         await userEvent.click(screen.getByRole('button', { name: /search/i }));
 
         await waitFor(() => {
-            expect(mockFetchPricesByPeriod).toHaveBeenCalledWith('AAPL', '1D');
+            expect(mockFetchPricesByPeriod).toHaveBeenCalledWith('AAPL', '1W');
         });
     });
 
@@ -149,7 +149,7 @@ describe('SearchPage', () => {
         await userEvent.type(input, 'AAPL{Enter}');
 
         await waitFor(() => {
-            expect(mockFetchPricesByPeriod).toHaveBeenCalledWith('AAPL', '1D');
+            expect(mockFetchPricesByPeriod).toHaveBeenCalledWith('AAPL', '1W');
         });
     });
 
@@ -204,5 +204,27 @@ describe('SearchPage', () => {
 
         expect(screen.queryByTestId('line-chart')).not.toBeInTheDocument();
         expect(screen.queryByText('1D')).not.toBeInTheDocument();
+    });
+
+    it('keeps period selector visible when no data for selected period', async () => {
+        mockValidateStock.mockResolvedValue({
+            valid: true,
+            symbol: 'XXXX',
+            name: 'Test Stock',
+        });
+        mockFetchPricesByPeriod.mockResolvedValue([]);
+
+        render(<SearchPage />);
+
+        await userEvent.type(screen.getByPlaceholderText(/nvda/i), 'XXXX');
+        await userEvent.click(screen.getByRole('button', { name: /search/i }));
+
+        await waitFor(() => {
+            expect(screen.getByText(/no price data found/i)).toBeInTheDocument();
+            expect(screen.getByText('1D')).toBeInTheDocument();
+            expect(screen.getByText('1W')).toBeInTheDocument();
+            expect(screen.getByText('1M')).toBeInTheDocument();
+            expect(screen.getByText('3M')).toBeInTheDocument();
+        });
     });
 });
