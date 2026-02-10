@@ -60,7 +60,6 @@ export default function AccountPage() {
                 setAccount(updated);
                 setIsEditing(false);
                 setError(null);
-                // update formValues to reflect any server-side changes
                 setFormValues({
                     username: updated.username,
                     email: updated.email,
@@ -73,128 +72,123 @@ export default function AccountPage() {
     };
 
     return (
-        <>
-            <div className="container">
-                <h1 className="text-light">Account</h1>
-
-                {loading && <p>Loading…</p>}
-                {error && <p className="error">{error}</p>}
-
-                {account && (
-                    <div className="panel account-panel space-y-6 mt-4">
-                        {!isEditing && (
-                            <button
-                                className="edit-btn"
-                                onClick={() => setIsEditing(true)}
-                            >
-                                <Pencil className="nav-icon text-light" />
-                            </button>
-                        )}
-
-                        {!isEditing ? (
-                            <>
-                                <div className="flex items-center justify-center space-x-4">
-                                    <span className="text-secondary">Username:</span>
-                                    <span>{account.username}</span>
-                                </div>
-
-                                <div className="flex items-center justify-center space-x-4">
-                                    <span className="text-secondary">Email:</span>
-                                    <span>{account.email}</span>
-                                </div>
-
-                                <div className="flex items-center justify-center space-x-4">
-                                    <span className="text-secondary">Name:</span>
-                                    <span>
-                                        {account.firstName} {account.lastName}
-                                    </span>
-                                </div>
-                            </>
-                        ) : (
-                            <form onSubmit={handleSubmit} className="space-y-6">
-                                <div className="flex items-center justify-center space-x-4">
-                                    <label className="text-secondary">Username:</label>
-                                    <input
-                                        type="text"
-                                        name="username"
-                                        value={formValues.username}
-                                        onChange={handleChange}
-                                        required
-                                    />
-                                </div>
-
-                                <div className="flex items-center justify-center space-x-4">
-                                    <label className="text-secondary">Email:</label>
-                                    <input
-                                        type="email"
-                                        name="email"
-                                        value={formValues.email}
-                                        onChange={handleChange}
-                                        required
-                                    />
-                                </div>
-
-                                <div className="flex items-center justify-center space-x-4">
-                                    <label className="text-secondary">First Name:</label>
-                                    <input
-                                        type="text"
-                                        name="firstName"
-                                        value={formValues.firstName}
-                                        onChange={handleChange}
-                                        required
-                                    />
-                                </div>
-
-                                <div className="flex items-center justify-center space-x-4">
-                                    <label className="text-secondary">Last Name:</label>
-                                    <input
-                                        type="text"
-                                        name="lastName"
-                                        value={formValues.lastName}
-                                        onChange={handleChange}
-                                        required
-                                    />
-                                </div>
-
-                                <div className="flex justify-center space-x-4">
-                                    <button
-                                        type="button"
-                                        className="btn"
-                                        onClick={() => {
-                                            if (account) {
-                                                setFormValues({
-                                                    username: account.username,
-                                                    email: account.email,
-                                                    firstName: account.firstName,
-                                                    lastName: account.lastName
-                                                });
-                                            }
-                                            setIsEditing(false);
-                                        }}
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button type="submit" className="btn">
-                                        Save Changes
-                                    </button>
-                                </div>
-                            </form>
-                        )}
-                    </div>
+        <div className="container account-section fade-in">
+            <div className="account-header">
+                <h1>Account</h1>
+                {account && !loading && !isEditing && (
+                    <button
+                        className="edit-btn"
+                        onClick={() => setIsEditing(true)}
+                    >
+                        <Pencil className="nav-icon" />
+                    </button>
                 )}
             </div>
 
-            <div className="container flex justify-center mt-4">
-                <button
-                    className="btn"
-                    onClick={async () => {
-                        await logout();
-                        window.location.href = '/';
-                    }}
-                >
-                    Log Out
-                </button>
-            </div>
-        </>
+            {loading && <p className="loading-spinner">Loading...</p>}
+            {error && <p className="error">{error}</p>}
+
+            {account && !loading && (
+                <div className="panel account-panel">
+                    {!isEditing ? (
+                        <>
+                            <div className="account-row">
+                                <span className="account-label">Username</span>
+                                <span className="account-value">{account.username}</span>
+                            </div>
+                            <div className="account-row">
+                                <span className="account-label">Email</span>
+                                <span className="account-value">{account.email}</span>
+                            </div>
+                            <div className="account-row">
+                                <span className="account-label">Name</span>
+                                <span className="account-value">
+                                    {account.firstName} {account.lastName}
+                                </span>
+                            </div>
+                        </>
+                    ) : (
+                        <form onSubmit={handleSubmit}>
+                            <div className="form-group">
+                                <label className="account-label">Username</label>
+                                <input
+                                    type="text"
+                                    name="username"
+                                    value={formValues.username}
+                                    onChange={handleChange}
+                                    required
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label className="account-label">Email</label>
+                                <input
+                                    type="email"
+                                    name="email"
+                                    value={formValues.email}
+                                    onChange={handleChange}
+                                    required
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label className="account-label">First Name</label>
+                                <input
+                                    type="text"
+                                    name="firstName"
+                                    value={formValues.firstName}
+                                    onChange={handleChange}
+                                    required
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label className="account-label">Last Name</label>
+                                <input
+                                    type="text"
+                                    name="lastName"
+                                    value={formValues.lastName}
+                                    onChange={handleChange}
+                                    required
+                                />
+                            </div>
+                            <div className="flex gap-2 justify-center" style={{ marginTop: '0.5rem' }}>
+                                <button
+                                    type="button"
+                                    className="btn"
+                                    onClick={() => {
+                                        if (account) {
+                                            setFormValues({
+                                                username: account.username,
+                                                email: account.email,
+                                                firstName: account.firstName,
+                                                lastName: account.lastName
+                                            });
+                                        }
+                                        setIsEditing(false);
+                                    }}
+                                >
+                                    Cancel
+                                </button>
+                                <button type="submit" className="btn btn-primary">
+                                    Save Changes
+                                </button>
+                            </div>
+                        </form>
+                    )}
+                </div>
+            )}
+
+            {account && !loading && (
+                <div className="account-actions">
+                    <button
+                        className="btn btn-danger"
+                        onClick={async () => {
+                            await logout();
+                            window.location.href = '/';
+                        }}
+                    >
+                        Log Out
+                    </button>
+                </div>
+            )}
+        </div>
     );
 }

@@ -93,7 +93,6 @@ export default function SearchPage() {
 
     const handlePeriodChange = (period: TimePeriod) => {
         setSelectedPeriod(period);
-        // Data fetching is handled by useEffect
     };
 
     // Compute Y-axis domain with padding so the line doesn't hug edges
@@ -119,10 +118,8 @@ export default function SearchPage() {
     const isPositive = dollarReturn >= 0;
 
     return (
-        <div className="container dashboard">
-            <header>
-                <h1>Search</h1>
-            </header>
+        <div className="container dashboard fade-in">
+            <h1>Search</h1>
 
             <StockSearchInput
                 value={symbol}
@@ -161,11 +158,16 @@ export default function SearchPage() {
                 />
             )}
 
+            {/* Loading state */}
+            {loading && displayedSymbol && (
+                <div className="loading-spinner" />
+            )}
+
             {/* Chart for selected period */}
             {displayedSymbol && priceData.length === 0 && !loading && error && (
                 <div className="price-panel chart-panel">
                     <h2>{PERIOD_LABELS[selectedPeriod]}</h2>
-                    <p className="text-secondary" style={{ textAlign: 'center', padding: '4rem 0' }}>
+                    <p className="text-secondary" style={{ textAlign: 'center', padding: '3rem 0' }}>
                         No data available for this period. Try a different time range.
                     </p>
                 </div>

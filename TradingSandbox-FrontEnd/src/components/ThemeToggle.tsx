@@ -34,7 +34,7 @@ export function ThemeToggle() {
     return (
         <button
             onClick={handleClick}
-            className="p-2 rounded-lg bg-neutral-200 dark:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary-400 transition"
+            className="theme-toggle-btn"
         >
             {theme === 'dark' ? '🌙 Dark' : '☀️ Light'}
         </button>

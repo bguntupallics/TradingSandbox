@@ -67,120 +67,118 @@ export default function Register() {
 
     if (registered) {
         return (
-            <div style={{ maxWidth: 400, margin: '2rem auto', textAlign: 'center' }}>
-                <h1>Check Your Email</h1>
-                <p style={{ marginTop: '1rem' }}>
-                    We've sent a verification link to <strong>{email}</strong>.
-                </p>
-                <p style={{ marginTop: '0.5rem', color: '#666' }}>
-                    Click the link in the email to verify your account, then come back to log in.
-                </p>
-                {!resendSuccess ? (
-                    <button
-                        type="button"
-                        onClick={handleResend}
-                        style={{ marginTop: '1rem', cursor: 'pointer', textDecoration: 'underline', background: 'none', border: 'none', color: '#0066cc' }}
-                    >
-                        Resend verification email
-                    </button>
-                ) : (
-                    <p style={{ color: 'green', marginTop: '1rem' }}>
-                        Verification email resent!
+            <div className="auth-page">
+                <div className="auth-card" style={{ textAlign: 'center' }}>
+                    <h1>Check Your Email</h1>
+                    <p style={{ marginTop: '0.5rem' }}>
+                        We've sent a verification link to <strong>{email}</strong>.
                     </p>
-                )}
-                <p style={{ marginTop: '1.5rem' }}>
-                    <Link to="/login">Go to Login</Link>
-                </p>
+                    <p className="text-secondary" style={{ marginTop: '0.5rem', fontSize: '0.9rem' }}>
+                        Click the link in the email to verify your account, then come back to log in.
+                    </p>
+                    {!resendSuccess ? (
+                        <button
+                            type="button"
+                            onClick={handleResend}
+                            className="resend-link"
+                            style={{ marginTop: '1rem' }}
+                        >
+                            Resend verification email
+                        </button>
+                    ) : (
+                        <div className="auth-alert success" style={{ marginTop: '1rem' }}>
+                            Verification email resent!
+                        </div>
+                    )}
+                    <p className="auth-footer">
+                        <Link to="/login">Go to Login</Link>
+                    </p>
+                </div>
             </div>
         );
     }
 
     return (
-        <div style={{ maxWidth: 400, margin: '2rem auto' }}>
-            <h1>Register</h1>
-            {error && <div style={{ color: 'red', marginBottom: '0.5rem' }}>{error}</div>}
-            <form onSubmit={handleSubmit}>
-                <div>
-                    <label>
-                        Email<br/>
+        <div className="auth-page">
+            <div className="auth-card">
+                <h1>Register</h1>
+
+                {error && <div className="auth-alert error">{error}</div>}
+
+                <form onSubmit={handleSubmit} className="auth-form">
+                    <div className="form-group">
+                        <label htmlFor="reg-email">Email</label>
                         <input
+                            id="reg-email"
                             type="email"
                             value={email}
                             onChange={e => setEmail(e.target.value)}
                             required
-                            style={{ width: '100%' }}
                         />
-                    </label>
-                </div>
-                <div style={{ marginTop: '1rem' }}>
-                    <label>
-                        First Name<br/>
+                    </div>
+                    <div className="form-group">
+                        <label htmlFor="reg-first-name">First Name</label>
                         <input
+                            id="reg-first-name"
                             type="text"
                             value={firstName}
                             onChange={e => setFirstName(e.target.value)}
                             required
-                            style={{ width: '100%' }}
                         />
-                    </label>
-                </div>
-                <div style={{ marginTop: '1rem' }}>
-                    <label>
-                        Last Name<br/>
+                    </div>
+                    <div className="form-group">
+                        <label htmlFor="reg-last-name">Last Name</label>
                         <input
+                            id="reg-last-name"
                             type="text"
                             value={lastName}
                             onChange={e => setLastName(e.target.value)}
                             required
-                            style={{ width: '100%' }}
                         />
-                    </label>
-                </div>
-                <div style={{ marginTop: '1rem' }}>
-                    <label>
-                        Password<br/>
+                    </div>
+                    <div className="form-group">
+                        <label htmlFor="reg-password">Password</label>
                         <input
+                            id="reg-password"
                             type="password"
                             value={password}
                             onChange={e => setPassword(e.target.value)}
                             required
                             minLength={8}
-                            style={{ width: '100%' }}
                         />
-                    </label>
-                    {password.length > 0 && (
-                        <div style={{ fontSize: '0.85rem', color: strength.color, marginTop: '0.25rem' }}>
-                            {strength.label}
-                            <span style={{ color: '#888', marginLeft: '0.5rem' }}>
-                                (min 8 chars, 1 uppercase, 1 number)
-                            </span>
-                        </div>
-                    )}
-                </div>
-                <div style={{ marginTop: '1rem' }}>
-                    <label>
-                        Confirm Password<br/>
+                        {password.length > 0 && (
+                            <div className="password-strength" style={{ color: strength.color }}>
+                                {strength.label}
+                                <span className="password-hint">
+                                    (min 8 chars, 1 uppercase, 1 number)
+                                </span>
+                            </div>
+                        )}
+                    </div>
+                    <div className="form-group">
+                        <label htmlFor="reg-confirm-password">Confirm Password</label>
                         <input
+                            id="reg-confirm-password"
                             type="password"
                             value={confirmPassword}
                             onChange={e => setConfirmPassword(e.target.value)}
                             required
-                            style={{ width: '100%' }}
                         />
-                    </label>
-                    {confirmPassword.length > 0 && confirmPassword !== password && (
-                        <div style={{ fontSize: '0.85rem', color: '#cc0000', marginTop: '0.25rem' }}>
-                            Passwords do not match
-                        </div>
-                    )}
-                </div>
-                <button type="submit" disabled={isSubmitting} style={{ marginTop: '1rem' }}>
-                    {isSubmitting ? 'Creating account...' : 'Register'}
-                </button>
-            </form>
-            <p style={{ marginTop: '1rem' }}>
-                Already have an account? <Link to="/login">Log in here</Link>.
-            </p>
+                        {confirmPassword.length > 0 && confirmPassword !== password && (
+                            <div className="password-strength" style={{ color: '#cc0000' }}>
+                                Passwords do not match
+                            </div>
+                        )}
+                    </div>
+                    <button type="submit" disabled={isSubmitting}>
+                        {isSubmitting ? 'Creating account...' : 'Register'}
+                    </button>
+                </form>
+
+                <p className="auth-footer">
+                    Already have an account? <Link to="/login">Log in here</Link>
+                </p>
+            </div>
         </div>
     );
 }

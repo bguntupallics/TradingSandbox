@@ -58,64 +58,63 @@ export default function Login() {
     };
 
     return (
-        <div style={{ maxWidth: 400, margin: '2rem auto' }}>
-            <h1>Login</h1>
+        <div className="auth-page">
+            <div className="auth-card">
+                <h1>Login</h1>
 
-            {verified && (
-                <div style={{ color: 'green', marginBottom: '1rem', padding: '0.5rem', border: '1px solid green', borderRadius: 4 }}>
-                    Email verified successfully! You can now log in.
-                </div>
-            )}
+                {verified && (
+                    <div className="auth-alert success">
+                        Email verified successfully! You can now log in.
+                    </div>
+                )}
 
-            {error && <div style={{ color: 'red', marginBottom: '0.5rem' }}>{error}</div>}
+                {error && <div className="auth-alert error">{error}</div>}
 
-            {showResend && !resendSuccess && (
-                <button
-                    type="button"
-                    onClick={handleResend}
-                    style={{ marginBottom: '1rem', cursor: 'pointer', textDecoration: 'underline', background: 'none', border: 'none', color: '#0066cc' }}
-                >
-                    Resend verification email
-                </button>
-            )}
-            {resendSuccess && (
-                <div style={{ color: 'green', marginBottom: '1rem' }}>
-                    Verification email sent! Check your inbox.
-                </div>
-            )}
+                {showResend && !resendSuccess && (
+                    <button
+                        type="button"
+                        onClick={handleResend}
+                        className="resend-link"
+                    >
+                        Resend verification email
+                    </button>
+                )}
+                {resendSuccess && (
+                    <div className="auth-alert success">
+                        Verification email sent! Check your inbox.
+                    </div>
+                )}
 
-            <form onSubmit={handleSubmit}>
-                <div>
-                    <label>
-                        Email<br/>
+                <form onSubmit={handleSubmit} className="auth-form">
+                    <div className="form-group">
+                        <label htmlFor="login-email">Email</label>
                         <input
+                            id="login-email"
                             type="email"
                             value={email}
                             onChange={e => setEmail(e.target.value)}
                             required
-                            style={{ width: '100%' }}
                         />
-                    </label>
-                </div>
-                <div style={{ marginTop: '1rem' }}>
-                    <label>
-                        Password<br/>
+                    </div>
+                    <div className="form-group">
+                        <label htmlFor="login-password">Password</label>
                         <input
+                            id="login-password"
                             type="password"
                             value={password}
                             onChange={e => setPassword(e.target.value)}
                             required
-                            style={{ width: '100%' }}
                         />
-                    </label>
-                </div>
-                <button type="submit" disabled={isSubmitting} style={{ marginTop: '1rem' }}>
-                    {isSubmitting ? 'Logging in...' : 'Log In'}
-                </button>
-            </form>
-            <p style={{ marginTop: '1rem' }}>
-                Don't have an account? <Link to="/register">Register here</Link>.
-            </p>
+                    </div>
+                    <button type="submit" disabled={isSubmitting}>
+                        {isSubmitting ? 'Logging in...' : 'Log In'}
+                    </button>
+                </form>
+
+                <p className="auth-footer">
+                    Don't have an account? <Link to="/register">Register here</Link>
+                </p>
+            </div>
         </div>
     );
 }

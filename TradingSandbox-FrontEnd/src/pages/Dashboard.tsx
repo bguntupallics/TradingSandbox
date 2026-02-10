@@ -29,16 +29,16 @@ export default function Dashboard() {
 
     if (loading) {
         return (
-            <div className="container">
+            <div className="container dashboard">
                 <h1>Dashboard</h1>
-                <p>Loading...</p>
+                <p className="loading-spinner">Loading...</p>
             </div>
         );
     }
 
     if (error) {
         return (
-            <div className="container">
+            <div className="container dashboard">
                 <h1>Dashboard</h1>
                 <p className="error">{error}</p>
             </div>
@@ -63,7 +63,7 @@ export default function Dashboard() {
     };
 
     return (
-        <div className="container dashboard">
+        <div className="container dashboard fade-in">
             <h1>Dashboard</h1>
 
             {/* Portfolio Value Header */}
