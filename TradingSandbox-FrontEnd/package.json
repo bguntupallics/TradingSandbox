@@ -15,7 +15,6 @@
   "dependencies": {
     "@shadcn/ui": "^0.0.4",
     "framer-motion": "^12.17.3",
-    "jwt-decode": "^4.0.0",
     "lucide-react": "^0.514.0",
     "nvm": "^0.0.4",
     "react": "^19.1.0",

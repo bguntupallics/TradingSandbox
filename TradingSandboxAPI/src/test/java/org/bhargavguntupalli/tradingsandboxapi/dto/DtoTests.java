@@ -43,10 +43,10 @@ class DtoTests {
     @Test
     void loginRequest_GettersAndSetters() {
         LoginRequest req = new LoginRequest();
-        req.setUsername("testuser");
+        req.setEmail("testuser@example.com");
         req.setPassword("secret");
 
-        assertThat(req.getUsername()).isEqualTo("testuser");
+        assertThat(req.getEmail()).isEqualTo("testuser@example.com");
         assertThat(req.getPassword()).isEqualTo("secret");
     }
 

@@ -40,6 +40,7 @@ public class DataInitializer {
                 admin.setEmail(adminEmail);
                 admin.setFirstName(adminFirstName);
                 admin.setLastName(adminLastName);
+                admin.setEmailVerified(true);
 
                 // fetch the RoleEntity for ROLE_ADMIN
                 RoleEntity adminRole = roleRepo.findByName(Role.ROLE_ADMIN)

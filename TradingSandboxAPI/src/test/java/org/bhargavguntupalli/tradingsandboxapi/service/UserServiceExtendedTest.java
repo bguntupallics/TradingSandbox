@@ -1,12 +1,11 @@
 package org.bhargavguntupalli.tradingsandboxapi.service;
 
 import org.bhargavguntupalli.tradingsandboxapi.dto.UserDto;
-import org.bhargavguntupalli.tradingsandboxapi.models.Role;
-import org.bhargavguntupalli.tradingsandboxapi.models.RoleEntity;
-import org.bhargavguntupalli.tradingsandboxapi.models.Theme;
-import org.bhargavguntupalli.tradingsandboxapi.models.User;
+import org.bhargavguntupalli.tradingsandboxapi.models.*;
+import org.bhargavguntupalli.tradingsandboxapi.repositories.EmailVerificationTokenRepository;
 import org.bhargavguntupalli.tradingsandboxapi.repositories.RoleRepository;
 import org.bhargavguntupalli.tradingsandboxapi.repositories.UserRepository;
+import org.bhargavguntupalli.tradingsandboxapi.services.EmailService;
 import org.bhargavguntupalli.tradingsandboxapi.services.impl.UserServiceImpl;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,11 +16,14 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -30,6 +32,8 @@ class UserServiceExtendedTest {
     @Mock UserRepository userRepo;
     @Mock RoleRepository roleRepo;
     @Mock PasswordEncoder encoder;
+    @Mock EmailVerificationTokenRepository tokenRepo;
+    @Mock EmailService emailService;
 
     @InjectMocks
     UserServiceImpl svc;
@@ -43,62 +47,100 @@ class UserServiceExtendedTest {
         u.setLastName("User");
         u.setThemePreference(Theme.LIGHT);
         u.setCashBalance(BigDecimal.valueOf(100000.00));
+        u.setEmailVerified(true);
         RoleEntity role = new RoleEntity(Role.ROLE_USER);
         u.setRole(role);
         return u;
     }
 
-    // ── registerNewUser ──────────────────────────────────────────────────
+    // ── verifyEmail ──────────────────────────────────────────────────────
 
     @Test
-    void registerNewUser_DuplicateEmail_Throws() {
-        UserDto dto = new UserDto();
-        dto.setUsername("newuser");
-        dto.setEmail("existing@test.com");
+    void verifyEmail_ValidToken_VerifiesUser() {
+        User user = createTestUser("alice");
+        user.setEmailVerified(false);
 
-        when(userRepo.findByUsername("newuser")).thenReturn(Optional.empty());
-        when(userRepo.findByEmail("existing@test.com")).thenReturn(Optional.of(new User()));
+        EmailVerificationToken vt = new EmailVerificationToken();
+        vt.setToken("valid-token");
+        vt.setUser(user);
+        vt.setExpiresAt(Instant.now().plus(1, ChronoUnit.HOURS));
+        vt.setUsed(false);
 
-        assertThatThrownBy(() -> svc.registerNewUser(dto))
+        when(tokenRepo.findByToken("valid-token")).thenReturn(Optional.of(vt));
+
+        svc.verifyEmail("valid-token");
+
+        assertThat(vt.isUsed()).isTrue();
+        assertThat(user.isEmailVerified()).isTrue();
+        verify(tokenRepo).save(vt);
+        verify(userRepo).save(user);
+    }
+
+    @Test
+    void verifyEmail_InvalidToken_Throws() {
+        when(tokenRepo.findByToken("bad-token")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> svc.verifyEmail("bad-token"))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("Email already in use");
+                .hasMessage("Invalid verification token");
     }
 
     @Test
-    void registerNewUser_MissingRole_Throws() {
-        UserDto dto = new UserDto();
-        dto.setUsername("newuser");
-        dto.setEmail("new@test.com");
+    void verifyEmail_UsedToken_Throws() {
+        EmailVerificationToken vt = new EmailVerificationToken();
+        vt.setUsed(true);
+        when(tokenRepo.findByToken("used-token")).thenReturn(Optional.of(vt));
 
-        when(userRepo.findByUsername("newuser")).thenReturn(Optional.empty());
-        when(userRepo.findByEmail("new@test.com")).thenReturn(Optional.empty());
-        when(roleRepo.findByName(Role.ROLE_USER)).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> svc.registerNewUser(dto))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessage("ROLE_USER not found");
+        assertThatThrownBy(() -> svc.verifyEmail("used-token"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("This verification link has already been used");
     }
 
     @Test
-    void registerNewUser_DefaultBalance_Is100000() {
-        UserDto dto = new UserDto();
-        dto.setUsername("alice");
-        dto.setEmail("alice@test.com");
-        dto.setPassword("pass");
-        dto.setFirstName("Alice");
-        dto.setLastName("Smith");
-        dto.setThemePreference("LIGHT");
+    void verifyEmail_ExpiredToken_Throws() {
+        EmailVerificationToken vt = new EmailVerificationToken();
+        vt.setUsed(false);
+        vt.setExpiresAt(Instant.now().minus(1, ChronoUnit.HOURS));
+        when(tokenRepo.findByToken("expired-token")).thenReturn(Optional.of(vt));
 
-        when(userRepo.findByUsername("alice")).thenReturn(Optional.empty());
-        when(userRepo.findByEmail("alice@test.com")).thenReturn(Optional.empty());
-        RoleEntity role = new RoleEntity(Role.ROLE_USER);
-        when(roleRepo.findByName(Role.ROLE_USER)).thenReturn(Optional.of(role));
-        when(encoder.encode("pass")).thenReturn("ENC");
-        when(userRepo.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+        assertThatThrownBy(() -> svc.verifyEmail("expired-token"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Verification link has expired. Please request a new one.");
+    }
 
-        UserDto result = svc.registerNewUser(dto);
+    // ── resendVerification ───────────────────────────────────────────────
 
-        assertThat(result.getCashBalance()).isEqualByComparingTo(BigDecimal.valueOf(100000.00));
+    @Test
+    void resendVerification_UnverifiedUser_SendsNewEmail() {
+        User user = createTestUser("alice");
+        user.setEmailVerified(false);
+        when(userRepo.findByEmail("alice@test.com")).thenReturn(Optional.of(user));
+        when(tokenRepo.save(any(EmailVerificationToken.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        svc.resendVerification("alice@test.com");
+
+        verify(emailService).sendVerificationEmail(eq(user), anyString());
+        verify(tokenRepo).save(any(EmailVerificationToken.class));
+    }
+
+    @Test
+    void resendVerification_AlreadyVerified_Throws() {
+        User user = createTestUser("alice");
+        user.setEmailVerified(true);
+        when(userRepo.findByEmail("alice@test.com")).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> svc.resendVerification("alice@test.com"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Email is already verified");
+    }
+
+    @Test
+    void resendVerification_NoAccount_Throws() {
+        when(userRepo.findByEmail("nobody@test.com")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> svc.resendVerification("nobody@test.com"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("No account found with that email");
     }
 
     // ── getUserDtoByUsername ──────────────────────────────────────────────
@@ -114,6 +156,7 @@ class UserServiceExtendedTest {
         assertThat(result.getEmail()).isEqualTo("alice@test.com");
         assertThat(result.getFirstName()).isEqualTo("Test");
         assertThat(result.getLastName()).isEqualTo("User");
+        assertThat(result.isEmailVerified()).isTrue();
         assertThat(result.getThemePreference()).isEqualTo("LIGHT");
     }
 
@@ -134,7 +177,7 @@ class UserServiceExtendedTest {
         when(userRepo.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
         UserDto dto = new UserDto();
-        dto.setUsername("alice"); // same username
+        dto.setUsername("alice");
         dto.setEmail("newemail@test.com");
         dto.setFirstName("NewFirst");
         dto.setLastName("NewLast");
@@ -188,14 +231,14 @@ class UserServiceExtendedTest {
         when(userRepo.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
         UserDto dto = new UserDto();
-        dto.setUsername(null); // null username
+        dto.setUsername(null);
         dto.setEmail("new@test.com");
         dto.setFirstName("New");
         dto.setLastName("Name");
 
         UserDto result = svc.updateProfile("alice", dto);
 
-        assertThat(result.getUsername()).isEqualTo("alice"); // unchanged
+        assertThat(result.getUsername()).isEqualTo("alice");
     }
 
     @Test

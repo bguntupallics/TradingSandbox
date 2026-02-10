@@ -32,6 +32,13 @@ admin:
   last-name: admin
   email: admin@test.com
 
+app:
+  frontend-url: http://localhost:5173
+  backend-url: http://localhost:8080
+  cookie:
+    secure: false
+    domain: ""
+
 logging:
   level:
     org.springframework.security: WARN

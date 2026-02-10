@@ -13,23 +13,24 @@ import java.math.BigDecimal;
 public class UserDto {
     private Long id;
 
-    // required on registration
-    @NotBlank(message="username is required", groups = { Register.class, UpdateProfile.class })
+    @NotBlank(message="username is required", groups = { UpdateProfile.class })
     private String username;
 
     @NotBlank(message="password is required", groups = Register.class)
+    @Size(min = 8, message = "password must be at least 8 characters", groups = Register.class)
     private String password;
 
-    // required when updating email
-    @NotBlank(message="email is required", groups = UpdateProfile.class)
-    @Email(message="must be a valid email", groups = UpdateProfile.class)
+    @NotBlank(message="email is required", groups = { Register.class, UpdateProfile.class })
+    @Email(message="must be a valid email", groups = { Register.class, UpdateProfile.class })
     private String email;
 
-    @NotBlank(message="firstName is required", groups = UpdateProfile.class)
+    @NotBlank(message="firstName is required", groups = { Register.class, UpdateProfile.class })
     private String firstName;
 
-    @NotBlank(message="lastName is required", groups = UpdateProfile.class)
+    @NotBlank(message="lastName is required", groups = { Register.class, UpdateProfile.class })
     private String lastName;
+
+    private boolean emailVerified;
 
     private String themePreference;
 

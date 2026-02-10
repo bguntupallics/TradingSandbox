@@ -1,40 +1,59 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { render, screen } from '@testing-library/react';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import HomeRedirect from './HomeRedirect';
 
-vi.mock('../services/auth', () => ({
-    isLoggedIn: vi.fn(),
+const mockUseAuth = vi.fn();
+
+vi.mock('../contexts/AuthContext', () => ({
+    useAuth: () => mockUseAuth(),
 }));
 
-import { isLoggedIn } from '../services/auth';
-
-const mockIsLoggedIn = vi.mocked(isLoggedIn);
-
 describe('HomeRedirect', () => {
-    it('redirects to /dashboard when logged in', () => {
-        mockIsLoggedIn.mockReturnValue(true);
+    it('shows loading state when auth is loading', () => {
+        mockUseAuth.mockReturnValue({ user: null, loading: true });
 
         render(
             <MemoryRouter initialEntries={['/']}>
-                <HomeRedirect />
+                <Routes>
+                    <Route path="/" element={<HomeRedirect />} />
+                </Routes>
             </MemoryRouter>
         );
 
-        // The component renders Navigate which changes the location
-        // Since Navigate is rendered, we just verify no crash and correct mock
-        expect(mockIsLoggedIn).toHaveBeenCalled();
+        expect(screen.getByText('Loading...')).toBeInTheDocument();
     });
 
-    it('redirects to /login when not logged in', () => {
-        mockIsLoggedIn.mockReturnValue(false);
+    it('redirects to /dashboard when user is authenticated', () => {
+        mockUseAuth.mockReturnValue({
+            user: { id: 1, username: 'test', email: 'test@example.com' },
+            loading: false,
+        });
 
         render(
             <MemoryRouter initialEntries={['/']}>
-                <HomeRedirect />
+                <Routes>
+                    <Route path="/" element={<HomeRedirect />} />
+                    <Route path="/dashboard" element={<div>Dashboard Page</div>} />
+                </Routes>
             </MemoryRouter>
         );
 
-        expect(mockIsLoggedIn).toHaveBeenCalled();
+        expect(screen.getByText('Dashboard Page')).toBeInTheDocument();
+    });
+
+    it('redirects to /login when user is not authenticated', () => {
+        mockUseAuth.mockReturnValue({ user: null, loading: false });
+
+        render(
+            <MemoryRouter initialEntries={['/']}>
+                <Routes>
+                    <Route path="/" element={<HomeRedirect />} />
+                    <Route path="/login" element={<div>Login Page</div>} />
+                </Routes>
+            </MemoryRouter>
+        );
+
+        expect(screen.getByText('Login Page')).toBeInTheDocument();
     });
 });

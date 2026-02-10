@@ -34,6 +34,13 @@ jwt:
   secret: ${JWT_SECRET}
   expiration-ms: ${JWT_EXPIRATION_MS:3600000}
 
+app:
+  frontend-url: http://localhost:5173
+  backend-url: http://localhost:8080
+  cookie:
+    secure: false
+    domain: ""
+
 rate-limit:
   max-requests: 10
   window-ms: 60000

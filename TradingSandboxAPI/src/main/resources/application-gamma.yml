@@ -38,6 +38,13 @@ jwt:
   secret: ${JWT_SECRET}
   expiration-ms: ${JWT_EXPIRATION_MS:3600000}
 
+app:
+  frontend-url: ${APP_FRONTEND_URL}
+  backend-url: ${APP_BACKEND_URL}
+  cookie:
+    secure: true
+    domain: ${APP_COOKIE_DOMAIN:}
+
 rate-limit:
   max-requests: 50
   window-ms: 60000

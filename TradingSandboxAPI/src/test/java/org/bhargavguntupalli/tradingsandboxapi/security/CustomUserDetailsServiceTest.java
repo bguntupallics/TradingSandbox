@@ -27,35 +27,48 @@ class CustomUserDetailsServiceTest {
     @InjectMocks
     CustomUserDetailsService service;
 
-    private User createTestUser(String username, String password, Role role) {
+    private User createTestUser(String username, String email, String password, Role role, boolean emailVerified) {
         User u = new User();
         u.setUsername(username);
         u.setPassword(password);
-        u.setEmail(username + "@test.com");
+        u.setEmail(email);
         u.setFirstName("Test");
         u.setLastName("User");
+        u.setEmailVerified(emailVerified);
         RoleEntity roleEntity = new RoleEntity(role);
         u.setRole(roleEntity);
         return u;
     }
 
     @Test
-    void loadUserByUsername_ExistingUser_ReturnsUserDetails() {
-        User user = createTestUser("alice", "encoded-pass", Role.ROLE_USER);
-        when(repo.findByUsername("alice")).thenReturn(Optional.of(user));
+    void loadUserByUsername_ExistingVerifiedUser_ReturnsEnabledUserDetails() {
+        User user = createTestUser("alice", "alice@test.com", "encoded-pass", Role.ROLE_USER, true);
+        when(repo.findByEmail("alice@test.com")).thenReturn(Optional.of(user));
 
-        UserDetails details = service.loadUserByUsername("alice");
+        UserDetails details = service.loadUserByUsername("alice@test.com");
 
         assertThat(details.getUsername()).isEqualTo("alice");
         assertThat(details.getPassword()).isEqualTo("encoded-pass");
+        assertThat(details.isEnabled()).isTrue();
+    }
+
+    @Test
+    void loadUserByUsername_UnverifiedUser_ReturnsDisabledUserDetails() {
+        User user = createTestUser("bob", "bob@test.com", "encoded-pass", Role.ROLE_USER, false);
+        when(repo.findByEmail("bob@test.com")).thenReturn(Optional.of(user));
+
+        UserDetails details = service.loadUserByUsername("bob@test.com");
+
+        assertThat(details.getUsername()).isEqualTo("bob");
+        assertThat(details.isEnabled()).isFalse();
     }
 
     @Test
     void loadUserByUsername_ExistingUser_HasCorrectAuthority() {
-        User user = createTestUser("alice", "encoded-pass", Role.ROLE_USER);
-        when(repo.findByUsername("alice")).thenReturn(Optional.of(user));
+        User user = createTestUser("alice", "alice@test.com", "encoded-pass", Role.ROLE_USER, true);
+        when(repo.findByEmail("alice@test.com")).thenReturn(Optional.of(user));
 
-        UserDetails details = service.loadUserByUsername("alice");
+        UserDetails details = service.loadUserByUsername("alice@test.com");
 
         assertThat(details.getAuthorities())
                 .extracting("authority")
@@ -64,10 +77,10 @@ class CustomUserDetailsServiceTest {
 
     @Test
     void loadUserByUsername_AdminUser_HasAdminAuthority() {
-        User user = createTestUser("admin", "encoded-pass", Role.ROLE_ADMIN);
-        when(repo.findByUsername("admin")).thenReturn(Optional.of(user));
+        User user = createTestUser("admin", "admin@test.com", "encoded-pass", Role.ROLE_ADMIN, true);
+        when(repo.findByEmail("admin@test.com")).thenReturn(Optional.of(user));
 
-        UserDetails details = service.loadUserByUsername("admin");
+        UserDetails details = service.loadUserByUsername("admin@test.com");
 
         assertThat(details.getAuthorities())
                 .extracting("authority")
@@ -75,11 +88,11 @@ class CustomUserDetailsServiceTest {
     }
 
     @Test
-    void loadUserByUsername_NonExistingUser_ThrowsUsernameNotFoundException() {
-        when(repo.findByUsername("nonexistent")).thenReturn(Optional.empty());
+    void loadUserByUsername_NonExistingEmail_ThrowsUsernameNotFoundException() {
+        when(repo.findByEmail("nonexistent@test.com")).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.loadUserByUsername("nonexistent"))
+        assertThatThrownBy(() -> service.loadUserByUsername("nonexistent@test.com"))
                 .isInstanceOf(UsernameNotFoundException.class)
-                .hasMessage("nonexistent");
+                .hasMessageContaining("nonexistent@test.com");
     }
 }

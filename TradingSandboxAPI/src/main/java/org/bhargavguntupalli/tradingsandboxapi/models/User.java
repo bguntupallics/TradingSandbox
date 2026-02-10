@@ -39,6 +39,10 @@ public class User {
     private String lastName;
 
     @Getter @Setter
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified = false;
+
+    @Getter @Setter
     @Enumerated(EnumType.STRING)
     @Column(name = "theme_preference", nullable = false)
     private Theme themePreference = Theme.LIGHT;

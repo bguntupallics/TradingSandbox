@@ -1,21 +1,19 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fetchWithJwt, fetchPricesByPeriod } from './api';
+import { fetchApi, fetchWithJwt, fetchPricesByPeriod } from './api';
 
 // Mock the auth module
 vi.mock('./auth', () => ({
-    getToken: vi.fn(),
     logout: vi.fn(),
 }));
 
-import { getToken, logout } from './auth';
+import { logout } from './auth';
 
-const mockGetToken = vi.mocked(getToken);
 const mockLogout = vi.mocked(logout);
 
 describe('api service', () => {
     beforeEach(() => {
         vi.restoreAllMocks();
-        // Reset window.location
+        mockLogout.mockResolvedValue(undefined);
         Object.defineProperty(window, 'location', {
             value: { href: '' },
             writable: true,
@@ -26,81 +24,74 @@ describe('api service', () => {
         vi.restoreAllMocks();
     });
 
-    // ── fetchWithJwt ─────────────────────────────────────────────────
+    // ── fetchApi ──────────────────────────────────────────────────────
 
-    describe('fetchWithJwt', () => {
-        it('adds Authorization header when token exists', async () => {
-            mockGetToken.mockReturnValue('my-jwt-token');
+    describe('fetchApi', () => {
+        it('sends requests with credentials include', async () => {
             global.fetch = vi.fn().mockResolvedValue({
                 ok: true,
                 status: 200,
                 json: () => Promise.resolve({ data: 'test' }),
             });
 
-            await fetchWithJwt('/api/test');
+            await fetchApi('/api/test');
 
             const callArgs = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
-            const headers = callArgs[1].headers;
-            expect(headers.get('Authorization')).toBe('Bearer my-jwt-token');
-        });
-
-        it('does not add Authorization header when no token', async () => {
-            mockGetToken.mockReturnValue(null);
-            global.fetch = vi.fn().mockResolvedValue({
-                ok: true,
-                status: 200,
-                json: () => Promise.resolve({ data: 'test' }),
-            });
-
-            await fetchWithJwt('/api/test');
-
-            const callArgs = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
-            const headers = callArgs[1].headers;
-            expect(headers.get('Authorization')).toBeNull();
+            expect(callArgs[1].credentials).toBe('include');
         });
 
         it('sets Content-Type to application/json', async () => {
-            mockGetToken.mockReturnValue(null);
             global.fetch = vi.fn().mockResolvedValue({
                 ok: true,
                 status: 200,
                 json: () => Promise.resolve({}),
             });
 
-            await fetchWithJwt('/api/test');
+            await fetchApi('/api/test');
 
             const callArgs = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
             const headers = callArgs[1].headers;
             expect(headers.get('Content-Type')).toBe('application/json');
         });
 
+        it('does not include Authorization header', async () => {
+            global.fetch = vi.fn().mockResolvedValue({
+                ok: true,
+                status: 200,
+                json: () => Promise.resolve({}),
+            });
+
+            await fetchApi('/api/test');
+
+            const callArgs = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+            const headers = callArgs[1].headers;
+            expect(headers.get('Authorization')).toBeNull();
+        });
+
         it('returns parsed JSON on success', async () => {
-            mockGetToken.mockReturnValue('token');
             global.fetch = vi.fn().mockResolvedValue({
                 ok: true,
                 status: 200,
                 json: () => Promise.resolve({ result: 42 }),
             });
 
-            const data = await fetchWithJwt<{ result: number }>('/api/test');
+            const data = await fetchApi<{ result: number }>('/api/test');
             expect(data.result).toBe(42);
         });
 
         it('calls logout and redirects on 401', async () => {
-            mockGetToken.mockReturnValue('expired-token');
             global.fetch = vi.fn().mockResolvedValue({
                 ok: false,
                 status: 401,
                 text: () => Promise.resolve('Unauthorized'),
             });
 
-            await expect(fetchWithJwt('/api/test')).rejects.toThrow('Unauthorized');
+            await expect(fetchApi('/api/test')).rejects.toThrow('Unauthorized');
             expect(mockLogout).toHaveBeenCalled();
             expect(window.location.href).toBe('/login');
         });
 
         it('throws on non-ok response with error text', async () => {
-            mockGetToken.mockReturnValue('token');
             global.fetch = vi.fn().mockResolvedValue({
                 ok: false,
                 status: 500,
@@ -108,11 +99,10 @@ describe('api service', () => {
                 text: () => Promise.resolve('Server error details'),
             });
 
-            await expect(fetchWithJwt('/api/test')).rejects.toThrow('Server error details');
+            await expect(fetchApi('/api/test')).rejects.toThrow('Server error details');
         });
 
         it('throws statusText when response text is empty', async () => {
-            mockGetToken.mockReturnValue('token');
             global.fetch = vi.fn().mockResolvedValue({
                 ok: false,
                 status: 500,
@@ -120,18 +110,17 @@ describe('api service', () => {
                 text: () => Promise.resolve(''),
             });
 
-            await expect(fetchWithJwt('/api/test')).rejects.toThrow('Internal Server Error');
+            await expect(fetchApi('/api/test')).rejects.toThrow('Internal Server Error');
         });
 
         it('passes through additional options', async () => {
-            mockGetToken.mockReturnValue('token');
             global.fetch = vi.fn().mockResolvedValue({
                 ok: true,
                 status: 200,
                 json: () => Promise.resolve({}),
             });
 
-            await fetchWithJwt('/api/test', { method: 'POST', body: '{}' });
+            await fetchApi('/api/test', { method: 'POST', body: '{}' });
 
             const callArgs = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
             expect(callArgs[1].method).toBe('POST');
@@ -139,11 +128,18 @@ describe('api service', () => {
         });
     });
 
+    // ── fetchWithJwt (deprecated alias) ──────────────────────────────
+
+    describe('fetchWithJwt (deprecated alias)', () => {
+        it('is the same function as fetchApi', () => {
+            expect(fetchWithJwt).toBe(fetchApi);
+        });
+    });
+
     // ── fetchPricesByPeriod ──────────────────────────────────────────
 
     describe('fetchPricesByPeriod', () => {
         it('calls correct URL for symbol and period', async () => {
-            mockGetToken.mockReturnValue('token');
             const priceData = [
                 { symbol: 'AAPL', timestamp: '2025-07-10', dateLabel: '7/10', closingPrice: 155 },
             ];
@@ -161,7 +157,6 @@ describe('api service', () => {
         });
 
         it('returns array of PriceData objects', async () => {
-            mockGetToken.mockReturnValue('token');
             const data = [
                 { symbol: 'GOOG', timestamp: '2025-01-01', dateLabel: '1/1', closingPrice: 2800 },
                 { symbol: 'GOOG', timestamp: '2025-01-02', dateLabel: '1/2', closingPrice: 2850 },
@@ -175,6 +170,19 @@ describe('api service', () => {
             const result = await fetchPricesByPeriod('GOOG', '1W');
             expect(result).toHaveLength(2);
             expect(result[0].symbol).toBe('GOOG');
+        });
+
+        it('uses credentials include', async () => {
+            global.fetch = vi.fn().mockResolvedValue({
+                ok: true,
+                status: 200,
+                json: () => Promise.resolve([]),
+            });
+
+            await fetchPricesByPeriod('AAPL', '1D');
+
+            const callArgs = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+            expect(callArgs[1].credentials).toBe('include');
         });
     });
 });

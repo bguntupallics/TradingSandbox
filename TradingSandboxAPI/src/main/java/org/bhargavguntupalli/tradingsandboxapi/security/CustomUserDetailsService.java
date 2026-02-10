@@ -14,15 +14,23 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     public CustomUserDetailsService(UserRepository repo) { this.repo = repo; }
 
+    /**
+     * Loads user by email (used as login credential).
+     * The "username" parameter is actually the user's email.
+     * Users who haven't verified their email are marked as disabled.
+     */
     @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User u = repo.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException(username));
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        User u = repo.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("No account found with email: " + email));
 
         return new org.springframework.security.core.userdetails.User(
                 u.getUsername(),
                 u.getPassword(),
-                // grant exactly one authority from the RoleEntity
+                u.isEmailVerified(),  // enabled
+                true,                 // accountNonExpired
+                true,                 // credentialsNonExpired
+                true,                 // accountNonLocked
                 List.of(new SimpleGrantedAuthority(u.getRole().getName().name()))
         );
     }

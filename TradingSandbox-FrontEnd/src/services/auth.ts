@@ -1,39 +1,93 @@
-import { jwtDecode } from 'jwt-decode';
-
 const API_BASE = import.meta.env.VITE_API_BASE || '';
 
-export interface JWTPayload {
-    exp: number; // expiration (seconds since epoch)
+export interface AuthUser {
+    id: number;
+    username: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    emailVerified: boolean;
+    cashBalance: number;
+    themePreference: string;
 }
 
-export async function login(username: string, password: string): Promise<void> {
+/**
+ * Login with email and password.
+ * The server sets an httpOnly cookie — we don't handle the token.
+ */
+export async function login(email: string, password: string): Promise<void> {
     const res = await fetch(`${API_BASE}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+        credentials: 'include',
+        body: JSON.stringify({ email, password }),
     });
     if (!res.ok) {
-        throw new Error('Login failed');
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'Login failed');
     }
-    const { token } = (await res.json()) as { token: string };
-    localStorage.setItem('jwt', token);
 }
 
-export function getToken(): string | null {
-    return localStorage.getItem('jwt');
+/**
+ * Register a new account. Does NOT auto-login — user must verify email first.
+ */
+export async function register(
+    email: string,
+    password: string,
+    firstName: string,
+    lastName: string,
+): Promise<void> {
+    const res = await fetch(`${API_BASE}/api/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email, password, firstName, lastName }),
+    });
+    if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        const msg = body.error || body.errors?.join(', ') || 'Registration failed';
+        throw new Error(msg);
+    }
 }
 
-export function isLoggedIn(): boolean {
-    const token = getToken();
-    if (!token) return false;
+/**
+ * Check if the user is currently authenticated by calling /api/auth/me.
+ * Returns user data if authenticated, null otherwise.
+ */
+export async function fetchCurrentUser(): Promise<AuthUser | null> {
     try {
-        const { exp } = jwtDecode<JWTPayload>(token);
-        return exp * 1000 > Date.now();
+        const res = await fetch(`${API_BASE}/api/auth/me`, {
+            credentials: 'include',
+        });
+        if (!res.ok) return null;
+        return (await res.json()) as AuthUser;
     } catch {
-        return false;
+        return null;
     }
 }
 
-export function logout(): void {
-    localStorage.removeItem('jwt');
+/**
+ * Logout: call the server to clear the httpOnly cookie.
+ */
+export async function logout(): Promise<void> {
+    await fetch(`${API_BASE}/api/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',
+    });
+}
+
+/**
+ * Resend the email verification link.
+ */
+export async function resendVerification(email: string): Promise<void> {
+    const res = await fetch(`${API_BASE}/api/auth/resend-verification`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email }),
+    });
+    if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'Failed to resend verification email');
+    }
 }

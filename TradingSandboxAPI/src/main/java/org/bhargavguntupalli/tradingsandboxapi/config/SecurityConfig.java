@@ -1,8 +1,6 @@
 package org.bhargavguntupalli.tradingsandboxapi.config;
 
 import org.bhargavguntupalli.tradingsandboxapi.security.JwtAuthenticationFilter;
-import org.bhargavguntupalli.tradingsandboxapi.security.JwtLoginFilter;
-import org.bhargavguntupalli.tradingsandboxapi.security.JwtProvider;
 import org.springframework.context.annotation.*;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -47,12 +45,8 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http,
                                             DaoAuthenticationProvider authProvider,
-                                            JwtAuthenticationFilter jwtFilter,
-                                            JwtProvider jwtProvider,
-                                            AuthenticationManager authManager
+                                            JwtAuthenticationFilter jwtFilter
     ) throws Exception {
-        JwtLoginFilter loginFilter = new JwtLoginFilter(authManager, jwtProvider);
-
         http
                 .cors(Customizer.withDefaults())
                 .headers(headers -> headers
@@ -70,12 +64,18 @@ public class SecurityConfig {
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers(
+                            "/api/auth/login",
+                            "/api/auth/login/",
+                            "/api/auth/register",
+                            "/api/auth/logout",
+                            "/api/auth/verify",
+                            "/api/auth/resend-verification"
+                        ).permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
-                )
-                .addFilter(loginFilter);
+                );
 
         return http.build();
     }

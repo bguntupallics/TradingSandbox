@@ -1,6 +1,6 @@
 import { useState, useEffect, type ChangeEvent, type FormEvent } from 'react';
-import { fetchWithJwt } from '../services/api';
-import { logout } from '../services/auth';
+import { fetchApi } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 import { Pencil } from 'lucide-react';
 import '../styles/global.css';
 
@@ -13,6 +13,7 @@ interface Account {
 }
 
 export default function AccountPage() {
+    const { logout } = useAuth();
     const [account, setAccount] = useState<Account | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
@@ -27,7 +28,7 @@ export default function AccountPage() {
 
     useEffect(() => {
         setLoading(true);
-        fetchWithJwt<Account>('/api/account')
+        fetchApi<Account>('/api/account')
             .then(data => {
                 setAccount(data);
                 setError(null);
@@ -50,7 +51,7 @@ export default function AccountPage() {
     const handleSubmit = (e: FormEvent) => {
         e.preventDefault();
         setLoading(true);
-        fetchWithJwt<Account>('/api/account/update', {
+        fetchApi<Account>('/api/account/update', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(formValues)
@@ -186,8 +187,8 @@ export default function AccountPage() {
             <div className="container flex justify-center mt-4">
                 <button
                     className="btn"
-                    onClick={() => {
-                        logout();
+                    onClick={async () => {
+                        await logout();
                         window.location.href = '/';
                     }}
                 >

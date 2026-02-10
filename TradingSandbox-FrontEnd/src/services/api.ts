@@ -1,28 +1,23 @@
 // src/services/api.ts
-import { getToken, logout } from './auth';
+import { logout } from './auth';
 
 const API_BASE = import.meta.env.VITE_API_BASE || '';
 
-export async function fetchWithJwt<T = never>(
+export async function fetchApi<T = never>(
     path: string,
     options: RequestInit = {}
 ): Promise<T> {
-    // Build a Headers object (no more implicit any!)
     const headers = new Headers(options.headers);
     headers.set('Content-Type', 'application/json');
 
-    const token = getToken();
-    if (token) {
-        headers.set('Authorization', `Bearer ${token}`);
-    }
-
     const res = await fetch(`${API_BASE}${path}`, {
         ...options,
-        headers,              // pass the Headers instance
+        headers,
+        credentials: 'include',
     });
 
     if (res.status === 401) {
-        logout();
+        await logout();
         window.location.href = '/login';
         throw new Error('Unauthorized');
     }
@@ -34,6 +29,9 @@ export async function fetchWithJwt<T = never>(
 
     return (await res.json()) as T;
 }
+
+/** @deprecated Use fetchApi instead */
+export const fetchWithJwt = fetchApi;
 
 // Time period types and API function
 export type TimePeriod = '1D' | '1W' | '1M' | '3M';
@@ -68,7 +66,7 @@ export async function fetchPricesByPeriod(
     symbol: string,
     period: TimePeriod
 ): Promise<PriceData[]> {
-    return fetchWithJwt<PriceData[]>(`/api/prices/${symbol}/period/${period}`);
+    return fetchApi<PriceData[]>(`/api/prices/${symbol}/period/${period}`);
 }
 
 export async function searchStocks(
@@ -78,7 +76,7 @@ export async function searchStocks(
     if (!query || query.trim().length < 1) {
         return [];
     }
-    const result = await fetchWithJwt<StockSearchResult>(
+    const result = await fetchApi<StockSearchResult>(
         `/api/prices/search/${encodeURIComponent(query.trim())}?limit=${limit}`
     );
     return result.suggestions || [];
@@ -86,7 +84,7 @@ export async function searchStocks(
 
 export async function validateStock(symbol: string): Promise<StockValidation> {
     try {
-        return await fetchWithJwt<StockValidation>(
+        return await fetchApi<StockValidation>(
             `/api/prices/validate/${encodeURIComponent(symbol.trim().toUpperCase())}`
         );
     } catch (err) {
@@ -154,20 +152,20 @@ export interface MarketStatus {
 // --- Trading API Functions ---
 
 export async function executeTrade(request: TradeRequest): Promise<TradeResult> {
-    return fetchWithJwt<TradeResult>('/api/trade/execute', {
+    return fetchApi<TradeResult>('/api/trade/execute', {
         method: 'POST',
         body: JSON.stringify(request),
     });
 }
 
 export async function fetchPortfolio(): Promise<PortfolioData> {
-    return fetchWithJwt<PortfolioData>('/api/trade/portfolio');
+    return fetchApi<PortfolioData>('/api/trade/portfolio');
 }
 
 export async function fetchTradeHistory(): Promise<TradeHistoryItem[]> {
-    return fetchWithJwt<TradeHistoryItem[]>('/api/trade/history');
+    return fetchApi<TradeHistoryItem[]>('/api/trade/history');
 }
 
 export async function fetchMarketStatus(): Promise<MarketStatus> {
-    return fetchWithJwt<MarketStatus>('/api/prices/market-status');
+    return fetchApi<MarketStatus>('/api/prices/market-status');
 }
