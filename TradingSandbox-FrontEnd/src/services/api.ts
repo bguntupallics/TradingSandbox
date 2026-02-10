@@ -97,3 +97,77 @@ export async function validateStock(symbol: string): Promise<StockValidation> {
         };
     }
 }
+
+// --- Trading Types ---
+
+export interface TradeRequest {
+    symbol: string;
+    quantity: number;
+    type: 'BUY' | 'SELL';
+}
+
+export interface TradeResult {
+    tradeId: number;
+    symbol: string;
+    type: string;
+    quantity: number;
+    pricePerShare: number;
+    totalCost: number;
+    remainingCashBalance: number;
+    executedAt: string;
+}
+
+export interface HoldingData {
+    symbol: string;
+    quantity: number;
+    averageCost: number;
+    currentPrice: number;
+    marketValue: number;
+    totalGainLoss: number;
+    totalGainLossPercent: number;
+}
+
+export interface PortfolioData {
+    cashBalance: number;
+    holdingsValue: number;
+    totalPortfolioValue: number;
+    totalGainLoss: number;
+    holdings: HoldingData[];
+}
+
+export interface TradeHistoryItem {
+    id: number;
+    symbol: string;
+    type: string;
+    quantity: number;
+    pricePerShare: number;
+    totalCost: number;
+    executedAt: string;
+}
+
+export interface MarketStatus {
+    open: boolean;
+    nextOpen: string;
+    nextClose: string;
+}
+
+// --- Trading API Functions ---
+
+export async function executeTrade(request: TradeRequest): Promise<TradeResult> {
+    return fetchWithJwt<TradeResult>('/api/trade/execute', {
+        method: 'POST',
+        body: JSON.stringify(request),
+    });
+}
+
+export async function fetchPortfolio(): Promise<PortfolioData> {
+    return fetchWithJwt<PortfolioData>('/api/trade/portfolio');
+}
+
+export async function fetchTradeHistory(): Promise<TradeHistoryItem[]> {
+    return fetchWithJwt<TradeHistoryItem[]>('/api/trade/history');
+}
+
+export async function fetchMarketStatus(): Promise<MarketStatus> {
+    return fetchWithJwt<MarketStatus>('/api/prices/market-status');
+}

@@ -3,6 +3,7 @@ import { fetchWithJwt, fetchPricesByPeriod } from '../services/api';
 import type { TimePeriod, PriceData } from '../services/api';
 import TimePeriodSelector from '../components/TimePeriodSelector';
 import StockSearchInput from '../components/StockSearchInput';
+import TradePanel from '../components/TradePanel';
 import {
     LineChart,
     Line,
@@ -224,6 +225,15 @@ export default function SearchPage() {
                         </LineChart>
                     </ResponsiveContainer>
                 </div>
+            )}
+
+            {/* Trade panel: only when we have a symbol and price */}
+            {displayedSymbol && latestPrice !== null && (
+                <TradePanel
+                    symbol={displayedSymbol}
+                    latestPrice={latestPrice}
+                    onTradeComplete={() => fetchData(displayedSymbol, selectedPeriod)}
+                />
             )}
         </div>
     );

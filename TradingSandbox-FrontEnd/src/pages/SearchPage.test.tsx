@@ -20,6 +20,8 @@ vi.mock('../services/api', () => ({
     fetchPricesByPeriod: vi.fn(),
     searchStocks: vi.fn(),
     validateStock: vi.fn(),
+    fetchMarketStatus: vi.fn().mockResolvedValue({ open: true, nextOpen: '', nextClose: '' }),
+    executeTrade: vi.fn(),
 }));
 
 import { fetchWithJwt, fetchPricesByPeriod, searchStocks, validateStock } from '../services/api';
@@ -102,7 +104,7 @@ describe('SearchPage', () => {
         await userEvent.click(screen.getByRole('button', { name: /search/i }));
 
         await waitFor(() => {
-            expect(screen.getByText(/AAPL/)).toBeInTheDocument();
+            expect(screen.getAllByText(/AAPL/).length).toBeGreaterThan(0);
         });
     });
 
@@ -179,7 +181,7 @@ describe('SearchPage', () => {
 
         await waitFor(() => {
             // Should show the last price from mockPriceData as fallback
-            expect(screen.getByText('$155.00')).toBeInTheDocument();
+            expect(screen.getAllByText('$155.00').length).toBeGreaterThan(0);
         });
     });
 

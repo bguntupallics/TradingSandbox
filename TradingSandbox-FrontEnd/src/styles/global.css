@@ -463,3 +463,330 @@ select {
 .footer-links a:hover {
     color: var(--text-primary);
 }
+
+/*--------------------------------------------------------------
+10. Trade Panel
+--------------------------------------------------------------*/
+.trade-panel {
+    margin-top: 1rem;
+}
+
+.trade-panel h3 {
+    margin: 0 0 0.75rem 0;
+}
+
+.trade-type-toggle {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.trade-type-btn {
+    flex: 1;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.trade-type-btn.buy {
+    color: #4caf50;
+    border-color: #4caf50;
+    background: transparent;
+}
+.trade-type-btn.buy.active {
+    background-color: #4caf50;
+    color: #fff;
+}
+
+.trade-type-btn.sell {
+    color: #f44336;
+    border-color: #f44336;
+    background: transparent;
+}
+.trade-type-btn.sell.active {
+    background-color: #f44336;
+    color: #fff;
+}
+
+.trade-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.trade-label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.trade-input {
+    width: 100%;
+    font-size: 1.1rem;
+    padding: 0.6rem 0.75rem;
+}
+
+.trade-price-info,
+.trade-estimate,
+.trade-balance-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+    padding: 0.25rem 0;
+}
+
+.trade-estimate {
+    font-weight: 600;
+    font-size: 1rem;
+    border-top: 1px solid var(--input-border);
+    padding-top: 0.5rem;
+}
+
+.trade-submit-btn {
+    width: 100%;
+    padding: 0.75rem;
+    font-weight: 600;
+    font-size: 1rem;
+    border-radius: 0.5rem;
+    border: none;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+.trade-submit-btn.buy {
+    background-color: #4caf50;
+    color: #fff;
+}
+.trade-submit-btn.buy:hover:not(:disabled) {
+    background-color: #43a047;
+}
+.trade-submit-btn.sell {
+    background-color: #f44336;
+    color: #fff;
+}
+.trade-submit-btn.sell:hover:not(:disabled) {
+    background-color: #e53935;
+}
+
+.trade-confirmation {
+    background-color: var(--input-bg);
+    border: 1px solid var(--input-border);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.trade-confirmation p {
+    margin: 0.25rem 0;
+}
+
+.trade-confirm-total {
+    font-size: 1.1rem;
+    margin-top: 0.5rem !important;
+}
+
+.trade-confirm-buttons {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+
+.trade-confirm-buttons .trade-submit-btn {
+    flex: 1;
+}
+
+.trade-cancel-btn {
+    flex: 1;
+    padding: 0.75rem;
+    font-weight: 600;
+    font-size: 1rem;
+    border-radius: 0.5rem;
+    background-color: var(--button-bg);
+    color: var(--control-text);
+    border: 1px solid var(--input-border);
+}
+.trade-cancel-btn:hover:not(:disabled) {
+    background-color: var(--button-hover);
+}
+
+.market-closed-banner {
+    background-color: rgba(244, 67, 54, 0.15);
+    color: #f44336;
+    border: 1px solid rgba(244, 67, 54, 0.3);
+    border-radius: 0.375rem;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.trade-success {
+    background-color: rgba(76, 175, 80, 0.15);
+    color: #4caf50;
+    border: 1px solid rgba(76, 175, 80, 0.3);
+    border-radius: 0.375rem;
+    padding: 0.75rem;
+    font-size: 0.9rem;
+}
+.trade-success p {
+    margin: 0.25rem 0;
+}
+
+.trade-error {
+    background-color: rgba(244, 67, 54, 0.15);
+    color: #f44336;
+    border: 1px solid rgba(244, 67, 54, 0.3);
+    border-radius: 0.375rem;
+    padding: 0.75rem;
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+}
+
+/*--------------------------------------------------------------
+11. Portfolio Dashboard
+--------------------------------------------------------------*/
+.portfolio-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.portfolio-value {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.portfolio-gain {
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+.portfolio-gain.positive { color: #4caf50; }
+.portfolio-gain.negative { color: #f44336; }
+
+.mt-1 { margin-top: 0.75rem; }
+
+.buying-power-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.buying-power-amount {
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.empty-state {
+    padding: 1rem 0;
+    text-align: center;
+    font-style: italic;
+}
+
+/* Holdings list */
+.holdings-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.holding-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--input-border);
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    margin: 0 -1rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+.holding-row:last-child { border-bottom: none; }
+.holding-row:hover { background-color: var(--button-hover); }
+
+.holding-left,
+.holding-right {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.holding-right {
+    text-align: right;
+}
+
+.holding-symbol {
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.holding-shares {
+    font-size: 0.8rem;
+}
+
+.holding-market-value {
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.holding-gain {
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+.holding-gain.positive { color: #4caf50; }
+.holding-gain.negative { color: #f44336; }
+
+/* Trade history */
+.trade-history-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.trade-history-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--input-border);
+    font-size: 0.9rem;
+}
+.trade-history-item:last-child { border-bottom: none; }
+
+.trade-history-left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.trade-history-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.1rem;
+}
+
+.trade-history-type {
+    font-weight: 700;
+    font-size: 0.75rem;
+    padding: 0.15rem 0.4rem;
+    border-radius: 0.25rem;
+    text-transform: uppercase;
+}
+.trade-history-type.buy {
+    color: #4caf50;
+    background-color: rgba(76, 175, 80, 0.15);
+}
+.trade-history-type.sell {
+    color: #f44336;
+    background-color: rgba(244, 67, 54, 0.15);
+}
+
+.trade-history-symbol {
+    font-weight: 600;
+}

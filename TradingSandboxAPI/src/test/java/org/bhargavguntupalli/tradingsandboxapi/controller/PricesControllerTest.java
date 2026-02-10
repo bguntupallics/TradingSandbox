@@ -1,5 +1,6 @@
 package org.bhargavguntupalli.tradingsandboxapi.controller;
 
+import org.bhargavguntupalli.tradingsandboxapi.controllers.DailyPriceController;
 import org.bhargavguntupalli.tradingsandboxapi.dto.*;
 import org.bhargavguntupalli.tradingsandboxapi.security.CustomUserDetailsService;
 import org.bhargavguntupalli.tradingsandboxapi.security.JwtProvider;
@@ -26,7 +27,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest
+@WebMvcTest(DailyPriceController.class)
 @AutoConfigureMockMvc(addFilters = false)
 class PricesControllerTest {
 
@@ -62,8 +63,8 @@ class PricesControllerTest {
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.open").value(true))
-                .andExpect(jsonPath("$.nextOpen").value(nextOpen.toString()))
-                .andExpect(jsonPath("$.nextClose").value(nextClose.toString()));
+                .andExpect(jsonPath("$.nextOpen").value("2025-07-10T09:30:00-04:00"))
+                .andExpect(jsonPath("$.nextClose").value("2025-07-09T16:00:00-04:00"));
     }
 
     // ── getOne ──────────────────────────────────────────────────────────
